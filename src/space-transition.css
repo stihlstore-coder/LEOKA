@@ -1,0 +1,2 @@
+.space-transition{position:relative;height:clamp(220px,26vw,360px);overflow:hidden;background:#010103}
+.space-transition canvas{position:absolute;inset:0;display:block;width:100%;height:100%}

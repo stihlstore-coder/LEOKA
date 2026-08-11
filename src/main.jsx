@@ -5,6 +5,7 @@ import './ecosystem.css'
 import './workforce.css'
 import './method.css'
 import './footer.css'
+import './space-transition.css'
 import DynamicEnergyCanvas from './DynamicEnergyCanvas.jsx'
 import WorkforceEnergyCanvas from './WorkforceEnergyCanvas.jsx'
 import { legalPages } from './legal.js'
@@ -100,6 +101,110 @@ function Hero() {
 
 function Company() {
   return <section className="company section" id="company"><CosmicScene variant="company"><div className="geometry geometry-company" /><div className="geometry geometry-company-two" /></CosmicScene><div className="container company-grid"><Reveal><p className="section-kicker">{SECTION_NUMBERS.company} / THE COMPANY</p><h2>Built<br /><span>differently.</span></h2></Reveal><Reveal className="company-copy"><p className="large-copy">LEOKA is an AI-native technology company developing software, intelligent systems and digital products through a specialized AI workforce.</p><p>What makes us different is not a single AI model. It is the organization built around it — a new operating model for creating technology.</p><a className="text-link" href="#workforce">See how we operate <Arrow /></a></Reveal></div></section>
+}
+
+function SpaceBlock() {
+  const canvasRef = useRef(null)
+  const stageRef = useRef(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const stage = stageRef.current
+    const context = canvas?.getContext('2d')
+    if (!canvas || !stage || !context) return undefined
+
+    const TAU = Math.PI * 2
+    const stars = Array.from({ length: 42 }, (_, index) => ({
+      x: (index * 47.3 % 100) / 100,
+      y: (index * 71.7 % 100) / 100,
+      radius: .35 + (index % 4) * .16,
+      phase: index * 1.73,
+    }))
+    const particles = Array.from({ length: 8 }, (_, index) => ({
+      x: .18 + (index * .097) % .64,
+      y: .22 + (index * .137) % .56,
+      radius: 1 + index % 2,
+      phase: index * 2.1,
+    }))
+    let width = 0
+    let height = 0
+    let frame = 0
+    let visible = false
+    const start = performance.now()
+
+    const resize = () => {
+      const rect = stage.getBoundingClientRect()
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+      width = rect.width
+      height = rect.height
+      canvas.width = Math.floor(width * dpr)
+      canvas.height = Math.floor(height * dpr)
+      canvas.style.width = `${width}px`
+      canvas.style.height = `${height}px`
+      context.setTransform(dpr, 0, 0, dpr, 0, 0)
+    }
+    const resizeObserver = new ResizeObserver(resize)
+    resizeObserver.observe(stage)
+    resize()
+
+    const draw = (now) => {
+      frame = 0
+      const progress = ((now - start) % 36000) / 36000
+      const phase = progress * TAU
+      context.clearRect(0, 0, width, height)
+      const glowX = width * (.32 + Math.sin(phase) * .08)
+      const glowY = height * (.42 + Math.cos(phase * .7) * .08)
+      const atmosphere = context.createRadialGradient(glowX, glowY, 0, glowX, glowY, Math.max(width, height) * .48)
+      atmosphere.addColorStop(0, 'rgba(35, 20, 67, .16)')
+      atmosphere.addColorStop(.48, 'rgba(13, 12, 29, .08)')
+      atmosphere.addColorStop(1, 'rgba(0, 0, 0, 0)')
+      context.fillStyle = atmosphere
+      context.fillRect(0, 0, width, height)
+      stars.forEach((star, index) => {
+        const twinkle = .2 + .12 * (.5 + .5 * Math.sin(phase * (index % 2 ? 1 : -1) + star.phase))
+        context.globalAlpha = twinkle
+        context.fillStyle = '#d9d0ed'
+        context.beginPath()
+        context.arc(star.x * width, star.y * height, star.radius, 0, TAU)
+        context.fill()
+      })
+      particles.forEach((particle) => {
+        context.globalAlpha = .08 + .04 * (.5 + .5 * Math.sin(phase * .6 + particle.phase))
+        context.fillStyle = '#886bb8'
+        context.beginPath()
+        context.arc(
+          (particle.x + Math.sin(phase * .35 + particle.phase) * .012) * width,
+          (particle.y + Math.cos(phase * .28 + particle.phase) * .012) * height,
+          particle.radius,
+          0,
+          TAU,
+        )
+        context.fill()
+      })
+      context.globalAlpha = 1
+      if (visible && document.visibilityState === 'visible') frame = requestAnimationFrame(draw)
+    }
+    const visibilityObserver = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting
+      if (visible) draw(performance.now())
+      else if (frame) { cancelAnimationFrame(frame); frame = 0 }
+    }, { rootMargin: '100px 0px' })
+    visibilityObserver.observe(stage)
+    const onVisibility = () => {
+      if (document.visibilityState !== 'visible' && frame) { cancelAnimationFrame(frame); frame = 0 }
+      else if (visible && !frame) frame = requestAnimationFrame(draw)
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      if (frame) cancelAnimationFrame(frame)
+      resizeObserver.disconnect()
+      visibilityObserver.disconnect()
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [])
+
+  return <section ref={stageRef} className="space-transition" aria-hidden="true"><canvas ref={canvasRef} /></section>
 }
 
 // Retained below for compatibility with the original section prototype; the
@@ -400,7 +505,7 @@ function App() {
   useEffect(() => { if (page) return undefined; const observer = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible') }), { threshold: .12 }); document.querySelectorAll('.reveal').forEach(el => observer.observe(el)); return () => observer.disconnect() }, [page])
   if (window.location.pathname !== '/' && !page) return <NotFound />
   if (page) return <LegalPage page={page} />
-  return <><Nav /><main id="main-content"><Hero /><Company /><Workforce /><Workflow /><Ecosystem /><NextBuild /></main><Footer /></>
+  return <><Nav /><main id="main-content"><Hero /><Company /><Workforce /><SpaceBlock /><Workflow /><Ecosystem /><NextBuild /></main><Footer /></>
 }
 
 createRoot(document.getElementById('root')).render(<StrictMode><App /></StrictMode>)
