@@ -93,3 +93,9 @@
     transform:none;
   }
 }
+
+@media(max-width:800px){
+  .section-kicker{
+    text-align:center;
+  }
+}
