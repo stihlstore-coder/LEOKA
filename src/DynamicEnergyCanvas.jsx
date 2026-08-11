@@ -39,18 +39,6 @@ function DynamicEnergyCanvas({ variant = 'default' }) {
       width: .55 + seeded(index, 10) * .65,
       pulseOffset: seeded(index, 11),
     }))
-    const arcGeometry = arcs.map(() => ({
-      a: { x: 0, y: 0 },
-      b: { x: 0, y: 0 },
-      c: { x: 0, y: 0 },
-      branch: { x: 0, y: 0 },
-      pulse: { x: 0, y: 0 },
-    }))
-    const setPoint = (target, centerX, centerY, radius, angle, distance) => {
-      target.x = centerX + Math.cos(angle) * radius * distance
-      target.y = centerY + Math.sin(angle) * radius * distance * .58
-      return target
-    }
 
     let width = 0
     let height = 0
@@ -80,10 +68,13 @@ function DynamicEnergyCanvas({ variant = 'default' }) {
       const radius = Math.min(width, height) * (.2 + (index % 3) * .075)
       const startAngle = arc.start * TAU + progress * TAU * (index % 2 ? -1 : 1)
       const endAngle = startAngle + (index % 2 ? -1.15 : 1.3) + arc.end * .7
-      const geometry = arcGeometry[index]
-      const a = setPoint(geometry.a, centerX, centerY, radius, startAngle, .62)
-      const b = setPoint(geometry.b, centerX, centerY, radius, (startAngle + endAngle) * .5 + arc.bend * Math.sin(progress * TAU + arc.phase), .98)
-      const c = setPoint(geometry.c, centerX, centerY, radius, endAngle, .62)
+      const point = (angle, distance) => ({
+        x: centerX + Math.cos(angle) * radius * distance,
+        y: centerY + Math.sin(angle) * radius * distance * .58,
+      })
+      const a = point(startAngle, .62)
+      const b = point((startAngle + endAngle) * .5 + arc.bend * Math.sin(progress * TAU + arc.phase), .98)
+      const c = point(endAngle, .62)
 
       ctx.save()
       ctx.beginPath()
@@ -104,7 +95,7 @@ function DynamicEnergyCanvas({ variant = 'default' }) {
       ctx.stroke()
 
       if (index % 2 === 0 && variant !== 'hero') {
-        const branch = setPoint(geometry.branch, centerX, centerY, radius, (startAngle + endAngle) * .5 + .42, .78)
+        const branch = point((startAngle + endAngle) * .5 + .42, .78)
         ctx.beginPath()
         ctx.moveTo(b.x, b.y)
         ctx.quadraticCurveTo((b.x + branch.x) * .5, (b.y + branch.y) * .5, branch.x, branch.y)
@@ -115,9 +106,7 @@ function DynamicEnergyCanvas({ variant = 'default' }) {
       }
 
       const pulse = (progress * (1.15 + index * .08) + arc.pulseOffset) % 1
-      const pulsePoint = geometry.pulse
-      pulsePoint.x = lerp(lerp(a.x, b.x, pulse), lerp(b.x, c.x, pulse), pulse)
-      pulsePoint.y = lerp(lerp(a.y, b.y, pulse), lerp(b.y, c.y, pulse), pulse)
+      const pulsePoint = lerp(lerp(a.x, b.x, pulse), lerp(b.x, c.x, pulse), pulse)
       const pulseGlow = ctx.createRadialGradient(pulsePoint, pulsePoint, 0, pulsePoint, pulsePoint, 14)
       pulseGlow.addColorStop(0, 'rgba(255,255,255,.95)')
       pulseGlow.addColorStop(.18, 'rgba(216,183,255,.8)')
