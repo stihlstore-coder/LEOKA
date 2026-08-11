@@ -42,4 +42,12 @@
   .workforce-visual{
     z-index:1;
   }
+
+  .workforce-stage{
+    width:100vw;
+    max-width:100vw;
+    height:auto;
+    aspect-ratio:2 / 5;
+    margin-left:calc((100% - 100vw) / 2);
+  }
 }
