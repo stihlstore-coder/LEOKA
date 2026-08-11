@@ -76,6 +76,7 @@
   .hero{
     height:auto;
     min-height:100svh;
+    display:block;
     align-items:flex-start;
   }
 
@@ -83,5 +84,12 @@
     flex-wrap:wrap;
     column-gap:24px;
     row-gap:18px;
+  }
+
+  .hero-scroll{
+    position:static;
+    width:max-content;
+    margin:clamp(36px,8vw,64px) auto 0;
+    transform:none;
   }
 }
