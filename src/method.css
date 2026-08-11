@@ -24,5 +24,5 @@
 .active-stage p{width:100%;max-width:178px;margin:1px auto 0;color:#c4b4da;font-size:10px;line-height:1.35;text-wrap:balance}
 @keyframes methodCoreStageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:800px){.workflow{min-height:1120px;padding:112px 0 70px}.workflow-layout{min-height:960px}.workflow-copy{max-width:330px}.workflow-copy h2{font-size:clamp(52px,14vw,78px)}.workflow-lede{font-size:13px}.workflow-active{margin-top:34px}.method-node{min-width:82px;padding:5px}.method-node-label{min-width:82px}.method-node-label small,.method-node-label strong{font-size:7px}.method-core-content{left:53%;top:55%;width:145px;height:145px;min-width:145px;min-height:145px;padding:17px;gap:8px}.core-brand b{font-size:clamp(12px,4vw,17px)}.core-brand span{font-size:6px}.core-divider{width:78%}.active-stage{min-height:76px;gap:5px}.active-stage small{font-size:8px}.active-stage strong{font-size:8px}.active-stage p{max-width:122px;font-size:8px;line-height:1.35}}
-@media(max-width:800px){.method-visual{transform:translateY(clamp(24px,5vw,40px))}}
+@media(max-width:800px){.method-visual{transform:translateY(clamp(48px,10vw,80px))}}
 @media(prefers-reduced-motion:reduce){.method-node{transition:none}}
