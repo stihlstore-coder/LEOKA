@@ -71,3 +71,17 @@
     max-width:none;
   }
 }
+
+@media(max-width:800px){
+  .hero{
+    height:auto;
+    min-height:100svh;
+    align-items:flex-start;
+  }
+
+  .hero-actions{
+    flex-wrap:wrap;
+    column-gap:24px;
+    row-gap:18px;
+  }
+}
