@@ -64,7 +64,7 @@ const productSystems = [
 // The repository currently has no separate application registry or product URL.
 // Keep this section data-driven so verified product metadata can be added without
 // changing the visualization itself.
-const productUrl = ''
+const productUrl = 'https://info.scoutlyai.us'
 const workWithLeokaHref = 'mailto:admin@leoka.us?subject=Work%20with%20LEOKA'
 
 function Arrow() { return <span className="arrow" aria-hidden="true">↗</span> }
@@ -332,7 +332,7 @@ function EcosystemVisual() {
 }
 
 function Ecosystem() {
-  return <section className="ecosystem section" id="ecosystem"><CosmicScene variant="ecosystem"><div className="ecosystem-grid-glow" /><div className="planet-arc" /><div className="planet-arc planet-arc-two" /></CosmicScene><div className="container ecosystem-content"><Reveal className="section-heading"><div><p className="section-kicker">{SECTION_NUMBERS.ecosystem} / BUILT BY LEOKA</p><h2>One company.<br /><span>Many intelligent systems.</span></h2></div><p>Technology designed,<br />engineered and operated by LEOKA.</p></Reveal><Reveal className="ecosystem-intro"><p>LEOKA builds software products designed to solve real business problems. Our product systems bring specialized capabilities together into one intelligent environment.</p><div className="ecosystem-actions">{productUrl ? <a className="button button-primary" href={productUrl} target="_blank" rel="noreferrer">Explore the Product <Arrow /></a> : <span className="button button-primary button-disabled" aria-disabled="true" title="Product URL not configured">Explore the Product <Arrow /></span>}<a className="text-link" href={workWithLeokaHref}>Work With LEOKA <Arrow /></a></div></Reveal><Reveal><EcosystemVisual /></Reveal><p className="ecosystem-note">PRODUCT REGISTRY / The public application registry is not configured in this build. Systems shown are the existing LEOKA build definitions.</p></div></section>
+  return <section className="ecosystem section" id="ecosystem"><CosmicScene variant="ecosystem"><div className="ecosystem-grid-glow" /><div className="planet-arc" /><div className="planet-arc planet-arc-two" /></CosmicScene><div className="container ecosystem-content"><Reveal className="section-heading"><div><p className="section-kicker">{SECTION_NUMBERS.ecosystem} / BUILT BY LEOKA</p><h2>One company.<br /><span>Many intelligent systems.</span></h2></div><p>Technology designed,<br />engineered and operated by LEOKA.</p></Reveal><Reveal className="ecosystem-intro"><p>LEOKA builds software products designed to solve real business problems. Our product systems bring specialized capabilities together into one intelligent environment.</p><div className="ecosystem-actions">{productUrl ? <a className="button button-primary" href={productUrl} target="_blank" rel="noopener noreferrer">Explore the Product <Arrow /></a> : <span className="button button-primary button-disabled" aria-disabled="true" title="Product URL not configured">Explore the Product <Arrow /></span>}<a className="text-link" href={workWithLeokaHref}>Work With LEOKA <Arrow /></a></div></Reveal><Reveal><EcosystemVisual /></Reveal><p className="ecosystem-note">PRODUCT REGISTRY / The public application registry is not configured in this build. Systems shown are the existing LEOKA build definitions.</p></div></section>
 }
 
 function NextBuild() {
