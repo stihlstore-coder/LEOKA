@@ -7,3 +7,58 @@
 .ecosystem-particle{animation:particleDrift 8s ease-in-out infinite}
 @keyframes particleDrift{0%,100%{transform:translate(0,0);opacity:1}50%{transform:translate(18px,-24px);opacity:.4}}
 @media(prefers-reduced-motion:reduce){.ecosystem-aura,.ecosystem-orbit,.ecosystem-core,.ecosystem-particle{animation:none}.ecosystem-node{transition:none}}
+
+@media(max-width:800px){
+  .ecosystem-visual{
+    width:100%;
+    height:1120px;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-rows:repeat(3,clamp(190px,52vw,216px));
+    column-gap:16px;
+    row-gap:clamp(24px,6vw,40px);
+    align-content:center;
+    left:auto;
+    margin-inline:auto;
+    transform:none;
+  }
+
+  .ecosystem-visual .ecosystem-node{
+    position:relative;
+    inset:auto;
+    width:auto;
+    min-height:0;
+    height:100%;
+    transform:none;
+  }
+
+  .ecosystem-visual .node-0{
+    grid-area:1 / 1;
+  }
+
+  .ecosystem-visual .node-1{
+    grid-area:1 / 2;
+  }
+
+  .ecosystem-visual .node-5{
+    grid-area:2 / 1;
+  }
+
+  .ecosystem-visual .node-2{
+    grid-area:2 / 2;
+  }
+
+  .ecosystem-visual .node-4{
+    grid-area:3 / 1;
+  }
+
+  .ecosystem-visual .node-3{
+    grid-area:3 / 2;
+  }
+
+  .ecosystem-visual .ecosystem-node.active,
+  .ecosystem-visual .ecosystem-node:hover,
+  .ecosystem-visual .ecosystem-node:focus{
+    transform:none;
+  }
+}
