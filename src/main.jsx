@@ -77,7 +77,7 @@ function Starfield({ density = 35 }) {
 function OrbitalStructure({ variant = 'hero' }) {
   return <div className={`orbital-structure ${variant}`} aria-hidden="true">
     <div className="structure-aura" /><div className="structure-ring ring-one" /><div className="structure-ring ring-two" /><div className="structure-ring ring-three" />
-    <div className="structure-core"><span />{variant !== 'hero' && <b>L</b>}<small>INTELLIGENCE CORE</small></div>
+    <div className="structure-core"><span />{variant !== 'hero' && variant !== 'technology' && <b>L</b>}<small>INTELLIGENCE CORE</small></div>
     <div className="structure-axis" /><div className="structure-beam beam-one" /><div className="structure-beam beam-two" />
     <div className="structure-satellite satellite-one" /><div className="structure-satellite satellite-two" />
   </div>
