@@ -56,6 +56,18 @@ function WorkforceEnergyCanvas({ onNodePosition, children }) {
       branches: mobile ? 2 : 3, segments: mobile ? 15 : 23,
       width: .72 + seeded(index, 16) * .5,
     }))
+    const makePoints = (count) => Array.from({ length: count }, () => ({ x: 0, y: 0 }))
+    const geometry = arcs.map((arc) => ({
+      primary: makePoints(arc.segments + 1),
+      secondary: arc.branches.map((_, branch) => makePoints(8 + branch * 2)),
+      micro: arc.branches.map(() => makePoints(6)),
+      branchEnds: arc.branches.map(() => ({ x: 0, y: 0 })),
+      microEnds: arc.branches.map(() => ({ x: 0, y: 0 })),
+      pulse: { x: 0, y: 0 },
+    }))
+    const nodePoints = nodes.map(() => ({ x: 0, y: 0, depth: 0 }))
+    const reactions = nodes.map(() => ({ intensity: 0, arrival: 0 }))
+    const centerPoint = { x: 0, y: 0 }
 
     let width = 0
     let height = 0
@@ -78,13 +90,16 @@ function WorkforceEnergyCanvas({ onNodePosition, children }) {
     resizeObserver.observe(stage)
     resize()
 
-    const center = () => ({ x: width * (mobile ? .53 : .57), y: height * .5 })
-    const orbitPoint = (node, progress) => {
+    const center = () => { centerPoint.x = width * (mobile ? .53 : .57); centerPoint.y = height * .5; return centerPoint }
+    const orbitPoint = (node, progress, target) => {
       const theta = node.angle + progress * TAU * node.cycles + Math.sin(progress * TAU + node.phase * TAU) * .025
       const c = center()
       const x = Math.cos(theta) * node.rx * width
       const y = Math.sin(theta) * node.ry * height
-      return { x: c.x + x * Math.cos(node.rotation) - y * Math.sin(node.rotation), y: c.y + x * Math.sin(node.rotation) + y * Math.cos(node.rotation), depth: Math.sin(theta + node.phase) }
+      target.x = c.x + x * Math.cos(node.rotation) - y * Math.sin(node.rotation)
+      target.y = c.y + x * Math.sin(node.rotation) + y * Math.cos(node.rotation)
+      target.depth = Math.sin(theta + node.phase)
+      return target
     }
     const drawPath = (points, lineWidth, color, blur = 0) => {
       context.save()
@@ -99,37 +114,41 @@ function WorkforceEnergyCanvas({ onNodePosition, children }) {
       context.stroke()
       context.restore()
     }
-    const lightningPath = (from, to, arc, progress, branch = 0, scale = 1) => {
+    const lightningPath = (from, to, arc, progress, branch = 0, scale = 1, target, segments = arc.segments, seedBase = arc.seed) => {
       const dx = to.x - from.x
       const dy = to.y - from.y
       const length = Math.hypot(dx, dy) || 1
       const nx = -dy / length
       const ny = dx / length
-      return Array.from({ length: arc.segments + 1 }, (_, index) => {
-        const t = index / arc.segments
+      for (let index = 0; index <= segments; index += 1) {
+        const t = index / segments
         const envelope = Math.sin(Math.PI * t)
-        const seed = arc.seed + branch * 3.73
+        const seed = seedBase + branch * 3.73
         const noise = Math.sin(index * 2.29 + seed * 12 + progress * TAU * (2 + branch)) * .58
           + Math.sin(index * 5.17 - seed * 8 + progress * TAU * (3 + branch)) * .28
           + Math.sin(index * 9.41 + seed * 5 - progress * TAU * (5 + branch)) * .14
         const amount = (10 + length * .018) * scale * envelope * noise
-        return { x: from.x + dx * t + nx * amount, y: from.y + dy * t + ny * amount }
-      })
+        target[index].x = from.x + dx * t + nx * amount
+        target[index].y = from.y + dy * t + ny * amount
+      }
+      return target
     }
-    const pulsePosition = (points, amount) => {
+    const pulsePosition = (points, amount, target) => {
       const scaled = amount * (points.length - 1)
       const index = Math.min(points.length - 2, Math.floor(scaled))
       const local = scaled - index
       const a = points[index]
       const b = points[index + 1]
-      return { x: a.x + (b.x - a.x) * local, y: a.y + (b.y - a.y) * local }
+      target.x = a.x + (b.x - a.x) * local
+      target.y = a.y + (b.y - a.y) * local
+      return target
     }
-    const drawLightning = (from, to, arc, progress) => {
+    const drawLightning = (from, to, arc, progress, buffer, reaction) => {
       const burst = Math.exp(-(circularDistance((progress + arc.phase) % 1, .18) ** 2) / .012)
       const secondaryBurst = Math.exp(-(circularDistance((progress + arc.phase) % 1, .68) ** 2) / .02)
       const flicker = .88 + .08 * Math.sin(progress * TAU * 17 + arc.seed * 9) + .04 * Math.sin(progress * TAU * 31 + arc.phase * 7)
       const intensity = clamp((.08 + burst * .9 + secondaryBurst * .42) * flicker)
-      const primary = lightningPath(from, to, arc, progress)
+      const primary = lightningPath(from, to, arc, progress, 0, 1, buffer.primary)
       drawPath(primary, 16 * intensity * arc.width, `rgba(107, 45, 219, ${.06 + intensity * .18})`, 30)
       drawPath(primary, 5.5 * intensity * arc.width, `rgba(163, 89, 255, ${.08 + intensity * .42})`, 14)
       drawPath(primary, .75 + intensity * 1.15, `rgba(255, 249, 255, ${.18 + intensity * .82})`, 3)
@@ -139,20 +158,26 @@ function WorkforceEnergyCanvas({ onNodePosition, children }) {
         const base = primary[Math.floor(anchor * (primary.length - 1))]
         const direction = branch % 2 ? 1 : -1
         const distance = (22 + branch * 12) * direction
-        const branchEnd = { x: base.x + (-((to.y - from.y) / (Math.hypot(to.x - from.x, to.y - from.y) || 1)) * distance) + (to.x - from.x) * .06, y: base.y + (((to.x - from.x) / (Math.hypot(to.x - from.x, to.y - from.y) || 1)) * distance) + (to.y - from.y) * .06 }
-        const secondary = lightningPath(base, branchEnd, { ...arc, segments: 7 + branch * 2, seed: arc.seed + branch * 6.1 }, progress + branch * .037, branch + 1, .7)
+        const branchEnd = buffer.branchEnds[branch]
+        const distanceBetween = Math.hypot(to.x - from.x, to.y - from.y) || 1
+        branchEnd.x = base.x + (-((to.y - from.y) / distanceBetween) * distance) + (to.x - from.x) * .06
+        branchEnd.y = base.y + (((to.x - from.x) / distanceBetween) * distance) + (to.y - from.y) * .06
+        const secondary = lightningPath(base, branchEnd, arc, progress + branch * .037, branch + 1, .7, buffer.secondary[branch], 7 + branch * 2, arc.seed + branch * 6.1)
         const branchLife = intensity * (.42 + .58 * (.5 + .5 * Math.sin(progress * TAU * (2 + branch) + arc.phase + branch)))
         drawPath(secondary, 2.8 * branchLife, `rgba(166, 93, 255, ${.11 + branchLife * .38})`, 9)
         drawPath(secondary, .4 + branchLife * .4, `rgba(255, 247, 255, ${.2 + branchLife * .6})`, 2)
         if (!mobile) {
           const microBase = secondary[Math.floor(secondary.length * .58)]
-          const micro = lightningPath(microBase, { x: microBase.x + direction * 20, y: microBase.y + 12 + branch * 6 }, { ...arc, segments: 5, seed: arc.seed + branch * 11 }, progress + .12, branch + 4, .28)
+          const microEnd = buffer.microEnds[branch]
+          microEnd.x = microBase.x + direction * 20
+          microEnd.y = microBase.y + 12 + branch * 6
+          const micro = lightningPath(microBase, microEnd, arc, progress + .12, branch + 4, .28, buffer.micro[branch], 5, arc.seed + branch * 11)
           drawPath(micro, .32 + branchLife * .22, `rgba(238, 221, 255, ${branchLife * .58})`, 2)
         }
       }
 
       const travel = (progress * (1 + (arc.segments % 3)) + arc.phase * .73) % 1
-      const point = pulsePosition(primary, travel)
+      const point = pulsePosition(primary, travel, buffer.pulse)
       const pulse = context.createRadialGradient(point.x, point.y, 0, point.x, point.y, 21)
       pulse.addColorStop(0, `rgba(255,255,255,${.2 + intensity * .78})`)
       pulse.addColorStop(.16, `rgba(237,211,255,${.18 + intensity * .56})`)
@@ -160,7 +185,9 @@ function WorkforceEnergyCanvas({ onNodePosition, children }) {
       pulse.addColorStop(1, 'rgba(88,35,190,0)')
       context.fillStyle = pulse
       context.beginPath(); context.arc(point.x, point.y, 21, 0, TAU); context.fill()
-      return { intensity, arrival: Math.exp(-(circularDistance(travel, .98) ** 2) / .006) * intensity }
+      reaction.intensity = intensity
+      reaction.arrival = Math.exp(-(circularDistance(travel, .98) ** 2) / .006) * intensity
+      return reaction
     }
 
     const draw = (now) => {
@@ -188,8 +215,8 @@ function WorkforceEnergyCanvas({ onNodePosition, children }) {
         context.strokeStyle = `rgba(179, 137, 250, ${ring.alpha})`; context.lineWidth = index % 2 ? .8 : .55; context.setLineDash(index % 2 ? [2, 10] : [1, 7]); context.lineDashOffset = -Math.sin(phase) * 4; context.stroke(); context.restore()
       })
 
-      const nodePoints = nodes.map((node) => orbitPoint(node, progress))
-      const reactions = nodePoints.map((point, index) => drawLightning(c, point, arcs[index], progress))
+      for (let index = 0; index < nodes.length; index += 1) orbitPoint(nodes[index], progress, nodePoints[index])
+      for (let index = 0; index < nodes.length; index += 1) drawLightning(c, nodePoints[index], arcs[index], progress, geometry[index], reactions[index])
       nodePoints.forEach((point, index) => {
         const reaction = reactions[index].arrival
         const endpoint = context.createRadialGradient(point.x, point.y, 0, point.x, point.y, 28)
