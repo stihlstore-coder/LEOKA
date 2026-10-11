@@ -8,6 +8,7 @@ import './footer.css'
 import './space-transition.css'
 import DynamicEnergyCanvas from './DynamicEnergyCanvas.jsx'
 import WorkforceEnergyCanvas from './WorkforceEnergyCanvas.jsx'
+import { observeCanvasResize } from './observeCanvasResize.js'
 import { legalPages } from './legal.js'
 import { company } from './siteConfig.js'
 
@@ -114,6 +115,7 @@ function SpaceBlock() {
     if (!canvas || !stage || !context) return undefined
 
     const TAU = Math.PI * 2
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const stars = Array.from({ length: 42 }, (_, index) => ({
       x: (index * 47.3 % 100) / 100,
       y: (index * 71.7 % 100) / 100,
@@ -137,15 +139,12 @@ function SpaceBlock() {
       const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
       width = rect.width
       height = rect.height
-      canvas.width = Math.floor(width * dpr)
-      canvas.height = Math.floor(height * dpr)
-      canvas.style.width = `${width}px`
-      canvas.style.height = `${height}px`
+      const pixelWidth = Math.max(1, Math.floor(width * dpr))
+      const pixelHeight = Math.max(1, Math.floor(height * dpr))
+      if (canvas.width !== pixelWidth) canvas.width = pixelWidth
+      if (canvas.height !== pixelHeight) canvas.height = pixelHeight
       context.setTransform(dpr, 0, 0, dpr, 0, 0)
     }
-    const resizeObserver = new ResizeObserver(resize)
-    resizeObserver.observe(stage)
-    resize()
 
     const draw = (now) => {
       frame = 0
@@ -182,11 +181,18 @@ function SpaceBlock() {
         context.fill()
       })
       context.globalAlpha = 1
-      if (visible && document.visibilityState === 'visible') frame = requestAnimationFrame(draw)
+      if (visible && document.visibilityState === 'visible' && !reduced) frame = requestAnimationFrame(draw)
     }
+    const schedule = () => {
+      if (!frame && visible && document.visibilityState === 'visible') frame = requestAnimationFrame(draw)
+    }
+    const stopObservingSize = observeCanvasResize(stage, () => {
+      resize()
+      schedule()
+    })
     const visibilityObserver = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting
-      if (visible) draw(performance.now())
+      if (visible) schedule()
       else if (frame) { cancelAnimationFrame(frame); frame = 0 }
     }, { rootMargin: '100px 0px' })
     visibilityObserver.observe(stage)
@@ -198,7 +204,7 @@ function SpaceBlock() {
 
     return () => {
       if (frame) cancelAnimationFrame(frame)
-      resizeObserver.disconnect()
+      stopObservingSize()
       visibilityObserver.disconnect()
       document.removeEventListener('visibilitychange', onVisibility)
     }
@@ -251,8 +257,7 @@ function WorkforceVisual({ active, onActivate }) {
       { rx: 1.45, ry: .58, rot: 1.1, cycles: 1 },
     ]
     let frame = 0; let visible = false; let start = performance.now(); let width = 0; let height = 0
-    const resize = () => { const rect = stage.getBoundingClientRect(); const dpr = Math.min(window.devicePixelRatio || 1, 2); width = rect.width; height = rect.height; canvas.width = Math.floor(width * dpr); canvas.height = Math.floor(height * dpr); canvas.style.width = `${width}px`; canvas.style.height = `${height}px`; context.setTransform(dpr, 0, 0, dpr, 0, 0) }
-    const resizeObserver = new ResizeObserver(resize); resizeObserver.observe(stage); resize()
+    const resize = () => { const rect = stage.getBoundingClientRect(); const dpr = Math.min(window.devicePixelRatio || 1, 2); width = rect.width; height = rect.height; const pixelWidth = Math.max(1, Math.floor(width * dpr)); const pixelHeight = Math.max(1, Math.floor(height * dpr)); if (canvas.width !== pixelWidth) canvas.width = pixelWidth; if (canvas.height !== pixelHeight) canvas.height = pixelHeight; context.setTransform(dpr, 0, 0, dpr, 0, 0) }
     const centerFor = () => ({ x: width * .55 + pointerRef.current.x * 4, y: height * .5 + pointerRef.current.y * 4 })
     const pointFor = (orbit, progress, offset = 0) => { const theta = orbit.phase + offset + progress * TAU * orbit.cycles; const c = centerFor(); const rawX = Math.cos(theta) * orbit.rx * width; const rawY = Math.sin(theta) * orbit.ry * height; return { x: c.x + rawX * Math.cos(orbit.rot) - rawY * Math.sin(orbit.rot), y: c.y + rawX * Math.sin(orbit.rot) + rawY * Math.cos(orbit.rot), z: Math.sin(theta + orbit.phase) * orbit.depth } }
     const pathStroke = (points, widthValue, color, blur = 0) => {
@@ -315,9 +320,11 @@ function WorkforceVisual({ active, onActivate }) {
       context.globalAlpha = 1; context.fillStyle = '#fff'; context.textAlign = 'center'; context.font = `600 ${Math.max(12, coreRadius * .28)}px ${getComputedStyle(stage).getPropertyValue('--mono') || 'monospace'}`; context.fillText('LEOKA', cx, cy - 2); context.fillStyle = '#cfb5f7'; context.font = `${Math.max(6, coreRadius * .105)}px monospace`; context.fillText('SHARED INTELLIGENCE', cx, cy + coreRadius * .24)
       if (visible && document.visibilityState === 'visible' && !reduced) frame = requestAnimationFrame(draw)
     }
-    const visibilityObserver = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; if (visible) draw(performance.now()); else if (frame) { cancelAnimationFrame(frame); frame = 0 } }, { rootMargin: '120px 0px' }); visibilityObserver.observe(stage)
-    const onVisibility = () => { if (document.visibilityState !== 'visible' && frame) { cancelAnimationFrame(frame); frame = 0 } else if (visible && !reduced && !frame) frame = requestAnimationFrame(draw) }; document.addEventListener('visibilitychange', onVisibility)
-    return () => { if (frame) cancelAnimationFrame(frame); resizeObserver.disconnect(); visibilityObserver.disconnect(); document.removeEventListener('visibilitychange', onVisibility) }
+    const schedule = () => { if (!frame && visible && document.visibilityState === 'visible') frame = requestAnimationFrame(draw) }
+    const stopObservingSize = observeCanvasResize(stage, () => { resize(); schedule() })
+    const visibilityObserver = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; if (visible) schedule(); else if (frame) { cancelAnimationFrame(frame); frame = 0 } }, { rootMargin: '120px 0px' }); visibilityObserver.observe(stage)
+    const onVisibility = () => { if (document.visibilityState !== 'visible' && frame) { cancelAnimationFrame(frame); frame = 0 } else schedule() }; document.addEventListener('visibilitychange', onVisibility)
+    return () => { if (frame) cancelAnimationFrame(frame); stopObservingSize(); visibilityObserver.disconnect(); document.removeEventListener('visibilitychange', onVisibility) }
   }, [])
 
   return <div ref={stageRef} className="workforce-visual" onPointerMove={(event) => { const rect = event.currentTarget.getBoundingClientRect(); pointerRef.current = { x: (event.clientX - rect.left - rect.width / 2) / rect.width * 10, y: (event.clientY - rect.top - rect.height / 2) / rect.height * 10 } }} onPointerLeave={() => { pointerRef.current = { x: 0, y: 0 } }}>
@@ -392,8 +399,7 @@ function MethodVisual({ active, onActivate }) {
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
     let width = 0; let height = 0; let frame = 0; let visible = false; let lastStage = -1
     const startTime = performance.now()
-    const resize = () => { const rect = stage.getBoundingClientRect(); const dpr = Math.min(window.devicePixelRatio || 1, 2); width = rect.width; height = rect.height; canvas.width = Math.floor(width * dpr); canvas.height = Math.floor(height * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0) }
-    const observer = new ResizeObserver(resize); observer.observe(stage); resize()
+    const resize = () => { const rect = stage.getBoundingClientRect(); const dpr = Math.min(window.devicePixelRatio || 1, 2); width = rect.width; height = rect.height; const pixelWidth = Math.max(1, Math.floor(width * dpr)); const pixelHeight = Math.max(1, Math.floor(height * dpr)); if (canvas.width !== pixelWidth) canvas.width = pixelWidth; if (canvas.height !== pixelHeight) canvas.height = pixelHeight; ctx.setTransform(dpr, 0, 0, dpr, 0, 0) }
     const center = () => ({ x: width * (mobile ? .53 : .62), y: height * .55 })
     const stroke = (points, color, size, blur = 0) => { ctx.save(); ctx.beginPath(); points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.strokeStyle = color; ctx.lineWidth = size; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.shadowColor = '#9e63ff'; ctx.shadowBlur = blur; ctx.stroke(); ctx.restore() }
     const ellipsePoint = (planet, progress, c) => { const angle = planet.phase + progress * TAU * planet.speed; const rx = planet.rx * width; const ry = planet.ry * height; const x = Math.cos(angle) * rx; const y = Math.sin(angle) * ry; return { x: c.x + x * Math.cos(planet.tilt) - y * Math.sin(planet.tilt), y: c.y + x * Math.sin(planet.tilt) + y * Math.cos(planet.tilt), z: Math.sin(angle + planet.phase) } }
@@ -415,10 +421,12 @@ function MethodVisual({ active, onActivate }) {
       ctx.globalAlpha = 1
       if (visible && document.visibilityState === 'visible' && !reduced) frame = requestAnimationFrame(draw)
     }
-    let intersection = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; if (visible) draw(performance.now()); else if (frame) cancelAnimationFrame(frame) }, { rootMargin: '140px 0px' }); intersection.observe(stage)
-    const onVisibility = () => { if (document.visibilityState === 'visible' && visible && !reduced && !frame) frame = requestAnimationFrame(draw); else if (document.visibilityState !== 'visible' && frame) cancelAnimationFrame(frame) }
+    const schedule = () => { if (!frame && visible && document.visibilityState === 'visible') frame = requestAnimationFrame(draw) }
+    const stopObservingSize = observeCanvasResize(stage, () => { resize(); schedule() })
+    let intersection = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; if (visible) schedule(); else if (frame) { cancelAnimationFrame(frame); frame = 0 } }, { rootMargin: '140px 0px' }); intersection.observe(stage)
+    const onVisibility = () => { if (document.visibilityState !== 'visible' && frame) { cancelAnimationFrame(frame); frame = 0 } else schedule() }
     document.addEventListener('visibilitychange', onVisibility)
-    return () => { if (frame) cancelAnimationFrame(frame); observer.disconnect(); intersection.disconnect(); document.removeEventListener('visibilitychange', onVisibility) }
+    return () => { if (frame) cancelAnimationFrame(frame); stopObservingSize(); intersection.disconnect(); document.removeEventListener('visibilitychange', onVisibility) }
   }, [onActivate])
 
   const [title, description] = methodSteps[active]

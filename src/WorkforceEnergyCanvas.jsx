@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { observeCanvasResize } from './observeCanvasResize.js'
 
 const TAU = Math.PI * 2
 // All animation frequencies complete an integer number of cycles in this
@@ -68,15 +69,12 @@ function WorkforceEnergyCanvas({ onNodePosition, children }) {
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       width = rect.width
       height = rect.height
-      canvas.width = Math.floor(width * dpr)
-      canvas.height = Math.floor(height * dpr)
-      canvas.style.width = `${width}px`
-      canvas.style.height = `${height}px`
+      const pixelWidth = Math.max(1, Math.floor(width * dpr))
+      const pixelHeight = Math.max(1, Math.floor(height * dpr))
+      if (canvas.width !== pixelWidth) canvas.width = pixelWidth
+      if (canvas.height !== pixelHeight) canvas.height = pixelHeight
       context.setTransform(dpr, 0, 0, dpr, 0, 0)
     }
-    const resizeObserver = new ResizeObserver(resize)
-    resizeObserver.observe(stage)
-    resize()
 
     const center = () => ({ x: width * (mobile ? .53 : .57), y: height * .5 })
     const orbitPoint = (node, progress) => {
@@ -217,11 +215,18 @@ function WorkforceEnergyCanvas({ onNodePosition, children }) {
       if (visible && document.visibilityState === 'visible' && !reduced) frame = requestAnimationFrame(draw)
     }
 
-    const visibilityObserver = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; if (visible) draw(performance.now()); else if (frame) { cancelAnimationFrame(frame); frame = 0 } }, { rootMargin: '120px 0px' })
+    const schedule = () => {
+      if (!frame && visible && document.visibilityState === 'visible') frame = requestAnimationFrame(draw)
+    }
+    const stopObservingSize = observeCanvasResize(stage, () => {
+      resize()
+      schedule()
+    })
+    const visibilityObserver = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; if (visible) schedule(); else if (frame) { cancelAnimationFrame(frame); frame = 0 } }, { rootMargin: '120px 0px' })
     visibilityObserver.observe(stage)
-    const onVisibility = () => { if (document.visibilityState !== 'visible' && frame) { cancelAnimationFrame(frame); frame = 0 } else if (visible && !reduced && !frame) frame = requestAnimationFrame(draw) }
+    const onVisibility = () => { if (document.visibilityState !== 'visible' && frame) { cancelAnimationFrame(frame); frame = 0 } else schedule() }
     document.addEventListener('visibilitychange', onVisibility)
-    return () => { if (frame) cancelAnimationFrame(frame); resizeObserver.disconnect(); visibilityObserver.disconnect(); document.removeEventListener('visibilitychange', onVisibility) }
+    return () => { if (frame) cancelAnimationFrame(frame); stopObservingSize(); visibilityObserver.disconnect(); document.removeEventListener('visibilitychange', onVisibility) }
   }, [])
 
   return <div ref={stageRef} className="workforce-visual"><canvas ref={canvasRef} role="img" aria-label="A living LEOKA intelligence core connected to six specialized AI employees" />{children}</div>

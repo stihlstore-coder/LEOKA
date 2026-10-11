@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { observeCanvasResize } from './observeCanvasResize.js'
 
 const TAU = Math.PI * 2
 const LOOP = 48000
@@ -51,16 +52,12 @@ function DynamicEnergyCanvas({ variant = 'default' }) {
       const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.25 : 1.75)
       width = rect.width
       height = rect.height
-      canvas.width = Math.floor(width * dpr)
-      canvas.height = Math.floor(height * dpr)
-      canvas.style.width = `${width}px`
-      canvas.style.height = `${height}px`
+      const pixelWidth = Math.max(1, Math.floor(width * dpr))
+      const pixelHeight = Math.max(1, Math.floor(height * dpr))
+      if (canvas.width !== pixelWidth) canvas.width = pixelWidth
+      if (canvas.height !== pixelHeight) canvas.height = pixelHeight
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     }
-
-    const resizeObserver = new ResizeObserver(resize)
-    resizeObserver.observe(stage)
-    resize()
 
     const drawArc = (arc, progress, index) => {
       const centerX = variant === 'hero' ? width * .72 : variant === 'cta' ? width * .62 : width * .58
@@ -147,11 +144,15 @@ function DynamicEnergyCanvas({ variant = 'default' }) {
     }
 
     const schedule = () => {
-      if (!frame && visible && document.visibilityState === 'visible' && !reduced) frame = requestAnimationFrame(draw)
+      if (!frame && visible && document.visibilityState === 'visible') frame = requestAnimationFrame(draw)
     }
+    const stopObservingSize = observeCanvasResize(stage, () => {
+      resize()
+      schedule()
+    })
     const visibilityObserver = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting
-      if (visible) draw(performance.now())
+      if (visible) schedule()
       else if (frame) { cancelAnimationFrame(frame); frame = 0 }
     }, { rootMargin: '120px 0px' })
     visibilityObserver.observe(stage)
@@ -163,7 +164,7 @@ function DynamicEnergyCanvas({ variant = 'default' }) {
 
     return () => {
       if (frame) cancelAnimationFrame(frame)
-      resizeObserver.disconnect()
+      stopObservingSize()
       visibilityObserver.disconnect()
       document.removeEventListener('visibilitychange', onVisibility)
     }
