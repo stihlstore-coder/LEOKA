@@ -1,5 +1,6 @@
 import { StrictMode, createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import { createPortal } from 'react-dom'
 import './styles.css'
 import './ecosystem.css'
 import './workforce.css'
@@ -14,7 +15,7 @@ import { getLocalizedLegalPage } from './legal.js'
 import { company } from './siteConfig.js'
 import { homepageTranslations } from './homepageTranslations.js'
 import { getLocalizedPath, getRoutePath, initializeLocaleRoute, saveHomepageLanguage } from './homepageCountry.js'
-import { MOBILE_VIEWPORT_QUERY, isMobileViewportWidth, shouldRenderDynamicCanvas } from './ecosystemPresentation.js'
+import { MOBILE_VIEWPORT_QUERY, getEcosystemPanelDetails, isMobileViewportWidth, lockEcosystemPageScroll, shouldRenderDynamicCanvas } from './ecosystemPresentation.js'
 
 const siteUrl = import.meta.env.VITE_SITE_URL?.replace(/\/$/, '')
 const initialLocaleLanguage = initializeLocaleRoute()
@@ -479,29 +480,151 @@ function Workflow() {
   return <section className="workflow section" id="method"><div className="method-space" aria-hidden="true" /><MethodVisual active={active} onActivate={setActive} /><div className="container workflow-layout"><Reveal className="workflow-copy"><p className="section-kicker">{SECTION_NUMBERS.workflow} / {text.kicker}</p><h2>{text.heading[0]}<br /><span>{text.heading[1]}</span></h2><p className="workflow-lede">{text.description}</p><a className="text-link" href="#method-visual">{text.explore} <Arrow /></a><div className="workflow-active"><span>{text.activeStage}</span><strong>{text.steps[active][0]}</strong></div></Reveal></div></section>
 }
 
-function EcosystemNode({ item, index, active, onActivate }) {
+function focusWithoutScroll(element) {
+  if (!element) return
+  try {
+    element.focus({ preventScroll: true })
+  } catch {
+    element.focus()
+  }
+}
+
+function EcosystemDetailPanel({ details, copy, triggerRef, onClose }) {
+  const panelRef = useRef(null)
+
+  useLayoutEffect(() => {
+    const restorePage = lockEcosystemPageScroll(document, window)
+    const handleWindowKeyDown = event => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      onClose()
+    }
+    window.addEventListener('keydown', handleWindowKeyDown, true)
+    focusWithoutScroll(panelRef.current)
+
+    return () => {
+      window.removeEventListener('keydown', handleWindowKeyDown, true)
+      restorePage()
+      focusWithoutScroll(triggerRef.current)
+    }
+  }, [triggerRef])
+
+  const handleKeyDown = event => {
+    if (event.key !== 'Tab') return
+    const focusable = panelRef.current?.querySelectorAll('button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])')
+    if (!focusable?.length) {
+      event.preventDefault()
+      focusWithoutScroll(panelRef.current)
+      return
+    }
+
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (event.shiftKey && (document.activeElement === first || document.activeElement === panelRef.current)) {
+      event.preventDefault()
+      focusWithoutScroll(last)
+    } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === panelRef.current)) {
+      event.preventDefault()
+      focusWithoutScroll(first)
+    }
+  }
+
+  return createPortal(
+    <section
+      ref={panelRef}
+      id="ecosystem-detail-dialog"
+      className="ecosystem-detail-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ecosystem-detail-title"
+      aria-describedby="ecosystem-detail-description"
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+    >
+      <header className="ecosystem-detail-header">
+        <p className="ecosystem-detail-brand">LEOKA <span>{details.number} / {details.category}</span></p>
+        <button className="ecosystem-detail-close" type="button" onClick={onClose} aria-label={copy.closePanel}>
+          <span aria-hidden="true">×</span>
+        </button>
+      </header>
+      <div className="ecosystem-detail-scroll">
+        <div className="ecosystem-detail-copy">
+          <p className="section-kicker">{details.ecosystemTitle}</p>
+          <h2 id="ecosystem-detail-title">{details.title}</h2>
+          <p id="ecosystem-detail-description" className="ecosystem-detail-description">{details.description}</p>
+          <div className="ecosystem-detail-context">
+            <h3>{details.ecosystemTitle}</h3>
+            <p>{details.ecosystemIntroduction}</p>
+            <p className="ecosystem-detail-note">{details.registryNote}</p>
+          </div>
+        </div>
+      </div>
+    </section>,
+    document.body,
+  )
+}
+
+function EcosystemNode({ item, index, active, onActivate, mobileViewport, onOpen, dialogOpen }) {
   const { copy } = useHomepageLocale(); const [num, title, description, type] = item
-  return <article className={`ecosystem-node node-${index} ${active === index ? 'active' : ''}`} onMouseEnter={() => onActivate(index)}>
+  const handleOpen = event => {
+    if (!mobileViewport) return
+    event.preventDefault()
+    onOpen(index, event.currentTarget)
+  }
+  const handleKeyDown = event => {
+    if (!mobileViewport || (event.key !== 'Enter' && event.key !== ' ')) return
+    event.preventDefault()
+    onOpen(index, event.currentTarget)
+  }
+
+  return <article
+    className={`ecosystem-node node-${index} ${active === index ? 'active' : ''}`}
+    onMouseEnter={() => onActivate(index)}
+    onClick={mobileViewport ? handleOpen : undefined}
+    onKeyDown={mobileViewport ? handleKeyDown : undefined}
+    role={mobileViewport ? 'button' : undefined}
+    tabIndex={mobileViewport ? 0 : undefined}
+    aria-haspopup={mobileViewport ? 'dialog' : undefined}
+    aria-expanded={mobileViewport ? dialogOpen : undefined}
+  >
     <span className="node-index">{num}</span><span className={`node-glyph glyph-${type}`} aria-hidden="true"><i /><b /></span><span className="node-category">{copy.ecosystem.nodeCategory}</span><strong>{title}</strong><small>{description}</small><span className="node-link">{copy.ecosystem.viewSystem} <Arrow /></span>
   </article>
 }
 
-function EcosystemVisual() {
+function EcosystemVisual({ mobileViewport }) {
   const { copy } = useHomepageLocale()
   const [active, setActive] = useState(0)
+  const [openSystemIndex, setOpenSystemIndex] = useState(null)
+  const triggerRef = useRef(null)
+  const closePanel = useCallback(() => setOpenSystemIndex(null), [])
+  const openPanel = (index, trigger) => {
+    if (!mobileViewport) return
+    triggerRef.current = trigger
+    setOpenSystemIndex(index)
+  }
+
+  useEffect(() => {
+    if (!mobileViewport) setOpenSystemIndex(null)
+  }, [mobileViewport])
+
+  const panelDetails = openSystemIndex === null
+    ? null
+    : getEcosystemPanelDetails(copy.ecosystem, openSystemIndex, productSystems[openSystemIndex]?.[0])
+
   return <div className="ecosystem-visual">
     <div className="ecosystem-aura" /><div className="ecosystem-orbit ecosystem-orbit-one" /><div className="ecosystem-orbit ecosystem-orbit-two" />
     <div className="ecosystem-lines" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
     <div className="ecosystem-core"><span className="core-signal" /><b>LEOKA</b><strong>{copy.ecosystem.coreTitle[0]}<br />{copy.ecosystem.coreTitle[1]}</strong><small>{copy.ecosystem.coreCaption}</small></div>
-    {productSystems.map(([num, type], i) => <EcosystemNode key={num} item={[num, ...copy.ecosystem.systems[i], type]} index={i} active={active} onActivate={setActive} />)}
+    {productSystems.map(([num, type], i) => <EcosystemNode key={num} item={[num, ...copy.ecosystem.systems[i], type]} index={i} active={active} onActivate={setActive} mobileViewport={mobileViewport} onOpen={openPanel} dialogOpen={openSystemIndex === i} />)}
     <div className="ecosystem-particle particle-one" /><div className="ecosystem-particle particle-two" /><div className="ecosystem-particle particle-three" />
+    {mobileViewport && panelDetails && <EcosystemDetailPanel details={panelDetails} copy={copy.ecosystem} triggerRef={triggerRef} onClose={closePanel} />}
   </div>
 }
 
 function Ecosystem() {
   const { copy } = useHomepageLocale(); const text = copy.ecosystem
   const mobileViewport = useMobileViewport()
-  return <section className="ecosystem section" id="ecosystem"><CosmicScene variant="ecosystem" mobileViewport={mobileViewport}><div className="ecosystem-grid-glow" /><div className="planet-arc" /><div className="planet-arc planet-arc-two" /></CosmicScene><div className="container ecosystem-content"><Reveal className="section-heading"><div><p className="section-kicker">{SECTION_NUMBERS.ecosystem} / {text.kicker}</p><h2>{text.heading[0]}<br /><span>{text.heading[1]}</span></h2></div><p>{text.subheading[0]}<br />{text.subheading[1]}</p></Reveal><Reveal className="ecosystem-intro"><p>{text.introduction}</p><div className="ecosystem-actions">{productUrl ? <a className="button button-primary" href={productUrl} target="_blank" rel="noopener noreferrer">{text.exploreProduct} <Arrow /></a> : <span className="button button-primary button-disabled" aria-disabled="true" title={text.productUrlMissing}>{text.exploreProduct} <Arrow /></span>}<a className="text-link" href={workWithLeokaHref}>{copy.footer.workWith} <Arrow /></a></div></Reveal><Reveal><EcosystemVisual /></Reveal><p className="ecosystem-note"><span>{text.registryLabel}</span> / {text.registryNote}</p></div></section>
+  return <section className="ecosystem section" id="ecosystem"><CosmicScene variant="ecosystem" mobileViewport={mobileViewport}><div className="ecosystem-grid-glow" /><div className="planet-arc" /><div className="planet-arc planet-arc-two" /></CosmicScene><div className="container ecosystem-content"><Reveal className="section-heading"><div><p className="section-kicker">{SECTION_NUMBERS.ecosystem} / {text.kicker}</p><h2>{text.heading[0]}<br /><span>{text.heading[1]}</span></h2></div><p>{text.subheading[0]}<br />{text.subheading[1]}</p></Reveal><Reveal className="ecosystem-intro"><p>{text.introduction}</p><div className="ecosystem-actions">{productUrl ? <a className="button button-primary" href={productUrl} target="_blank" rel="noopener noreferrer">{text.exploreProduct} <Arrow /></a> : <span className="button button-primary button-disabled" aria-disabled="true" title={text.productUrlMissing}>{text.exploreProduct} <Arrow /></span>}<a className="text-link" href={workWithLeokaHref}>{copy.footer.workWith} <Arrow /></a></div></Reveal><Reveal><EcosystemVisual mobileViewport={mobileViewport} /></Reveal><p className="ecosystem-note"><span>{text.registryLabel}</span> / {text.registryNote}</p></div></section>
 }
 
 function NextBuild() {
