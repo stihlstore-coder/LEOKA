@@ -14,7 +14,7 @@ const seeded = (index, salt) => {
 const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value))
 const circularDistance = (a, b) => { const distance = Math.abs(a - b) % 1; return Math.min(distance, 1 - distance) }
 
-function WorkforceEnergyCanvas({ onNodePosition, children }) {
+function WorkforceEnergyCanvas({ onNodePosition, children, ariaLabel = 'A living LEOKA intelligence core connected to six specialized AI employees', sharedIntelligenceLabel = 'SHARED INTELLIGENCE' }) {
   const canvasRef = useRef(null)
   const stageRef = useRef(null)
   const positionRef = useRef(onNodePosition)
@@ -211,7 +211,7 @@ function WorkforceEnergyCanvas({ onNodePosition, children }) {
         const a = i / 20 * TAU + phase * (i % 2 ? -1 : 2); const radius = coreRadius * (.26 + (i % 6) * .1)
         context.globalAlpha = .16 + corePulse * .13; context.fillStyle = i % 5 === 0 ? '#fff' : '#ae7bff'; context.beginPath(); context.arc(c.x + Math.cos(a) * radius, c.y + Math.sin(a) * radius, i % 4 === 0 ? 1.2 : .65, 0, TAU); context.fill()
       }
-      context.globalAlpha = 1; context.fillStyle = '#fff'; context.textAlign = 'center'; context.font = `600 ${Math.max(12, coreRadius * .28)}px var(--mono)`; context.fillText('LEOKA', c.x, c.y - 2); context.fillStyle = '#cdb4f3'; context.font = `${Math.max(6, coreRadius * .105)}px var(--mono)`; context.fillText('SHARED INTELLIGENCE', c.x, c.y + coreRadius * .24)
+      context.globalAlpha = 1; context.fillStyle = '#fff'; context.textAlign = 'center'; context.font = `600 ${Math.max(12, coreRadius * .28)}px var(--mono)`; context.fillText('LEOKA', c.x, c.y - 2); context.fillStyle = '#cdb4f3'; context.font = `${Math.max(6, coreRadius * .105)}px var(--mono)`; context.fillText(sharedIntelligenceLabel, c.x, c.y + coreRadius * .24)
       if (visible && document.visibilityState === 'visible' && !reduced) frame = requestAnimationFrame(draw)
     }
 
@@ -227,9 +227,9 @@ function WorkforceEnergyCanvas({ onNodePosition, children }) {
     const onVisibility = () => { if (document.visibilityState !== 'visible' && frame) { cancelAnimationFrame(frame); frame = 0 } else schedule() }
     document.addEventListener('visibilitychange', onVisibility)
     return () => { if (frame) cancelAnimationFrame(frame); stopObservingSize(); visibilityObserver.disconnect(); document.removeEventListener('visibilitychange', onVisibility) }
-  }, [])
+  }, [sharedIntelligenceLabel])
 
-  return <div ref={stageRef} className="workforce-visual"><canvas ref={canvasRef} role="img" aria-label="A living LEOKA intelligence core connected to six specialized AI employees" />{children}</div>
+  return <div ref={stageRef} className="workforce-visual"><canvas ref={canvasRef} role="img" aria-label={ariaLabel} />{children}</div>
 }
 
 export { LOOP_DURATION }

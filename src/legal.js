@@ -1,4 +1,5 @@
 import { company } from './siteConfig.js'
+import { legalTranslations } from './legalTranslations.js'
 
 const para = (text) => ({ type: 'paragraph', text })
 const link = (label, href) => ({ type: 'link', label, href })
@@ -104,17 +105,17 @@ export const legalPages = {
     description: 'How LEOKA uses cookies and similar technologies.',
     lastUpdated: 'August 11, 2026',
     sections: [
-      ['1. Introduction', [para('This Cookie Policy describes how Green Craft LLC, operating the LEOKA brand, uses cookies and similar technologies on the LEOKA website and related services. It should be read together with the Privacy Policy. The current public LEOKA website does not implement identifiable cookies, localStorage, sessionStorage, analytics, advertising pixels, or a cookie-consent mechanism.')],],
+      ['1. Introduction', [para('This Cookie Policy describes how Green Craft LLC, operating the LEOKA brand, uses cookies and similar technologies on the LEOKA website and related services. It should be read together with the Privacy Policy. The current public LEOKA website does not use cookies, analytics, advertising pixels, or a cookie-consent mechanism. It stores the language selected by the user in browser localStorage.')],],
       ['2. What Are Cookies?', [para('Cookies are small text files or similar browser technologies stored on, or read from, a device when a website is accessed. Similar technologies can include localStorage, sessionStorage, pixels, SDK-based identifiers, and other browser storage mechanisms. These technologies are not interchangeable, and this Policy uses “cookies and similar technologies” as the broader category.')]],
-      ['3. How LEOKA Uses Cookies and Similar Technologies', [para('Based on an audit of the current website code, LEOKA does not currently use cookies or similar browser storage to operate the website, maintain security, remember preferences, understand website usage, measure performance, support requested functionality, or advertise. If the implementation changes, this Policy may be updated to describe the relevant technology and purpose.')]],
-      ['4. Actual Website Implementation', [para('The current implementation contains no calls to document.cookie, localStorage, sessionStorage, or browser storage APIs; no analytics or telemetry scripts; no advertising or remarketing pixels; no authentication cookies; no third-party tracking SDKs; and no cookie banner or consent manager. The website uses client-side visual effects and canvas rendering, but those effects do not create a cookie or browser-storage record.')]],
-      ['5. Essential Technologies', [para('LEOKA does not currently use identifiable essential cookies or browser-storage technologies on this public website. No cookie inventory is provided because the audit found no identifiable cookie names, providers, purposes, categories, or durations to list.')]],
-      ['6. Preference Technologies', [para('LEOKA does not currently store theme, language, interface, or cookie-consent preferences in localStorage, sessionStorage, cookies, or another identified browser-storage mechanism on this website.')]],
+      ['3. How LEOKA Uses Cookies and Similar Technologies', [para('Based on an audit of the current website code, LEOKA does not use cookies or similar browser storage for security, analytics, advertising, or marketing. The website uses localStorage only to remember the language selected by the user. If the implementation changes, this Policy may be updated to describe the relevant technology and purpose.')]],
+      ['4. Actual Website Implementation', [para('The current implementation does not access document.cookie or sessionStorage. It uses localStorage only to remember the language selected by the user. It has no analytics or telemetry scripts, advertising or remarketing pixels, authentication cookies, third-party tracking SDKs, cookie banner, or consent manager. Client-side visual effects and canvas rendering do not create browser-storage records.')]],
+      ['5. Essential Technologies', [para('LEOKA does not currently use identifiable essential cookies on this public website. No cookie inventory is provided because the audit found no identifiable cookie names, providers, purposes, categories, or durations to list.')]],
+      ['6. Preference Technologies', [para('LEOKA stores the language selected by the user in localStorage so that the preference is remembered on later visits. It does not store theme, other interface, or cookie-consent preferences in browser storage.')]],
       ['7. Analytics Technologies', [para('LEOKA does not currently use third-party analytics cookies or analytics technologies on this website. The code audit found no Google Analytics, Google Tag Manager, Plausible, PostHog, Mixpanel, Segment, Amplitude, Hotjar, Microsoft Clarity, or comparable analytics implementation.')]],
       ['8. Advertising and Marketing Technologies', [para('LEOKA does not currently use advertising cookies, marketing cookies, remarketing technologies, or advertising pixels on this website. The audit found no Meta Pixel, TikTok Pixel, Google Ads tag, or comparable advertising implementation.')]],
       ['9. Third-Party Technologies', [para('The current public website does not embed a third-party service that places cookies or tracking identifiers. LEOKA may develop integrations for other products or applications, but an API integration is not, by itself, a website cookie or tracking technology. This Policy will be updated if a third-party website technology is added.')]],
       ['10. TikTok and Social Platform Tracking', [para('The current website does not implement TikTok tracking, TikTok Pixel, or TikTok cookies. A possible TikTok API integration for a LEOKA application would be separate from website tracking and is not classified as a cookie provider under this Policy.')]],
-      ['11. Local Storage and Similar Technologies', [para('The current website does not use localStorage or sessionStorage. It also does not use pixels, SDK-based identifiers, or another identified browser-storage mechanism. These technologies should not be confused with cookies if they are introduced in a future implementation.')]],
+      ['11. Local Storage and Similar Technologies', [para('The current website uses localStorage solely to remember the language selected by the user. It does not use sessionStorage, pixels, SDK-based identifiers, or another identified browser-storage mechanism. These technologies should not be confused with cookies if they are introduced in a future implementation.')]],
       ['12. Cookie Consent and Preferences', [para('The current website does not use a cookie banner, consent manager, or consent-preference storage mechanism because the audit found no cookies or similar technologies requiring a consent control. We do not claim that users can manage preferences through a consent manager.')]],
       ['13. Managing Cookies Through Your Browser', [para('Although LEOKA does not currently set identifiable cookies on this website, most browsers provide controls to block cookies, delete stored cookies, restrict third-party cookies, and configure privacy settings. Disabling cookies or browser storage generally may affect the functionality of websites that rely on those technologies.')]],
       ['14. Privacy and Data Protection', [para('Cookie-related information that qualifies as personal information may be handled according to applicable privacy laws and the LEOKA Privacy Policy. Where applicable law provides additional rights or requirements, those rights and requirements may apply.'), link('Read the Privacy Policy', '/privacy')]],
@@ -155,4 +156,45 @@ export const legalPages = {
       ['21. Company Information', [para(`Legal Name: ${company.legalName}\nBrand: ${company.brand}\nEntity Type: ${company.entityType}\nJurisdiction: ${company.jurisdiction}\nRegistered Address: ${company.address[0]}\n${company.address[1]}\n${company.address[2]}\nEmail: ${company.email}\nPrimary Phone: ${company.phone}`)]]
     ],
   },
+}
+
+function sectionTranslationKey(heading) {
+  return heading.replace(/[’']/g, '').replace(/^\d+\.\s*/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+export function getLocalizedLegalPage(pageKey, language) {
+  const page = legalPages[pageKey]
+  if (!page) return null
+  if (language === 'en') return page
+
+  const translation = legalTranslations[language]?.[pageKey]
+  if (!translation) throw new Error(`Missing legal page translation: ${language}.${pageKey}`)
+
+  const sections = page.sections.map(([heading, blocks]) => {
+    const key = sectionTranslationKey(heading)
+    const translated = translation.sections[key]
+    if (!translated || translated.blocks.length !== blocks.length) {
+      throw new Error(`Incomplete legal translation: ${language}.${pageKey}.${key}`)
+    }
+    const localizedBlocks = blocks.map((block, index) => {
+      const translatedBlock = translated.blocks[index]
+      if (block.type !== translatedBlock?.type) {
+        throw new Error(`Mismatched legal translation block: ${language}.${pageKey}.${key}.${index}`)
+      }
+      if (block.type === 'link') return { ...block, label: translatedBlock.label }
+      if (block.type === 'list') {
+        if (block.items.length !== translatedBlock.items.length) {
+          throw new Error(`Incomplete legal translation list: ${language}.${pageKey}.${key}.${index}`)
+        }
+        return { ...block, items: translatedBlock.items }
+      }
+      return { ...block, text: translatedBlock.text }
+    })
+    return [translated.heading, localizedBlocks]
+  })
+
+  if (Object.keys(translation.sections).length !== sections.length) {
+    throw new Error(`Unexpected legal translation sections: ${language}.${pageKey}`)
+  }
+  return { ...page, ...translation, sections }
 }

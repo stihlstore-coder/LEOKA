@@ -58,7 +58,18 @@
    consistent focus treatment without changing the default visual system. */
 .skip-link{position:fixed;left:16px;top:12px;z-index:40;padding:12px 16px;background:#f4edff;color:#160b28;font:11px var(--mono);transform:translateY(-160%);transition:transform .2s ease}.skip-link:focus{transform:none}
 .brand:focus-visible,.nav-links a:focus-visible,.menu-button:focus-visible,.button:focus-visible,.text-link:focus-visible{outline:2px solid #d0b6ff;outline-offset:5px}
+.language-switcher{display:flex;align-items:center;gap:9px;padding-left:2px;color:#aaa6b2;font:10px var(--mono);letter-spacing:.08em;white-space:nowrap}
+.language-option-wrap{display:flex;align-items:center;gap:9px}
+.language-separator{color:#51475f}
+.language-option{border:0;border-bottom:1px solid transparent;padding:5px 2px;background:transparent;color:#aaa6b2;font:inherit;letter-spacing:inherit;cursor:pointer}
+.language-option:hover,.language-option.is-active{color:#f2eff8}
+.language-option.is-active{border-bottom-color:var(--bright)}
+.language-option:focus-visible{outline:2px solid #d0b6ff;outline-offset:4px}
+.nav-links.has-language>a{white-space:nowrap}
+.nav-links.has-language .nav-cta,.nav-links.has-language .language-switcher{flex-shrink:0}
+@media(min-width:801px) and (max-width:1100px){.nav-links.has-language{gap:18px}.nav-links.has-language .nav-cta{padding:10px 12px}}
 @media(max-width:800px){.nav{position:relative;height:70px}.menu-button{display:grid;place-items:center;gap:5px;width:44px;height:44px;padding:10px;cursor:pointer}.menu-button span{display:block;width:22px;height:1px;background:#eee5ff;transition:transform .2s ease}.nav-links{position:absolute;left:20px;right:20px;top:calc(100% + 1px);display:none;flex-direction:column;align-items:stretch;gap:0;padding:10px;background:#08060ed9;border:1px solid #7653a766;box-shadow:0 18px 50px #000b;backdrop-filter:blur(18px)}.nav-links.is-open{display:flex}.nav-links a{padding:14px 12px}.nav-links .nav-cta{margin-top:4px;text-align:center}}
+@media(max-width:800px){.nav-links .language-switcher{justify-content:center;margin-top:8px;padding:12px 10px 8px;border-top:1px solid #ffffff18}.nav-links .language-option-wrap{gap:12px}.nav-links .language-option{min-width:48px;padding:9px 8px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}.skip-link{transition:none}}
 
 @media(max-width:800px){

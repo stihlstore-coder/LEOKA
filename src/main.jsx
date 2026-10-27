@@ -1,4 +1,4 @@
-import { StrictMode, useCallback, useEffect, useRef, useState } from 'react'
+import { StrictMode, createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles.css'
 import './ecosystem.css'
@@ -9,11 +9,14 @@ import './space-transition.css'
 import DynamicEnergyCanvas from './DynamicEnergyCanvas.jsx'
 import WorkforceEnergyCanvas from './WorkforceEnergyCanvas.jsx'
 import { observeCanvasResize } from './observeCanvasResize.js'
-import { legalPages } from './legal.js'
+import { getLocalizedLegalPage } from './legal.js'
 import { company } from './siteConfig.js'
+import { homepageTranslations } from './homepageTranslations.js'
+import { getLocalizedPath, getRoutePath, initializeLocaleRoute, saveHomepageLanguage } from './homepageCountry.js'
 
 const siteUrl = import.meta.env.VITE_SITE_URL?.replace(/\/$/, '')
-const siteDescription = 'LEOKA is an AI-native technology company building software, intelligent systems and digital products through a specialized AI workforce.'
+const initialLocaleLanguage = initializeLocaleRoute()
+document.documentElement.lang = initialLocaleLanguage
 
 const SECTION_NUMBERS = Object.freeze({
   hero: '01',
@@ -48,20 +51,12 @@ function setMetaContent(selector, content) {
   if (element) element.setAttribute('content', content)
 }
 
-const departments = [
-  ['PRODUCT', 'AI Product Manager'], ['RESEARCH', 'AI Researcher'],
-  ['ENGINEERING', 'AI Engineer'], ['SYSTEM', 'AI System Architect'],
-  ['DATA', 'AI Data Engineer'], ['QUALITY', 'AI QA Engineer']
-]
-
 const productSystems = [
-  ['01', 'SOFTWARE', 'Digital foundations designed to move with the world.', 'software'],
-  ['02', 'AI SYSTEMS', 'Specialized intelligence shaped into useful systems.', 'intelligence'],
-  ['03', 'DIGITAL PRODUCTS', 'Clear, capable experiences for ambitious organizations.', 'product'],
-  ['04', 'AUTOMATION', 'Workflows that turn complexity into momentum.', 'automation'],
-  ['05', 'DATA INFRASTRUCTURE', 'The connective tissue behind better decisions.', 'data'],
-  ['06', 'INTELLIGENT PLATFORMS', 'Technology that learns, responds, and evolves.', 'platform']
+  ['01', 'software'], ['02', 'intelligence'], ['03', 'product'],
+  ['04', 'automation'], ['05', 'data'], ['06', 'platform']
 ]
+const HomepageLocaleContext = createContext(null)
+function useHomepageLocale() { return useContext(HomepageLocaleContext) || { language: 'en', copy: homepageTranslations.en } }
 
 // The repository currently has no separate application registry or product URL.
 // Keep this section data-driven so verified product metadata can be added without
@@ -77,9 +72,10 @@ function Starfield({ density = 35 }) {
 }
 
 function OrbitalStructure({ variant = 'hero' }) {
+  const { copy } = useHomepageLocale()
   return <div className={`orbital-structure ${variant}`} aria-hidden="true">
     <div className="structure-aura" /><div className="structure-ring ring-one" /><div className="structure-ring ring-two" /><div className="structure-ring ring-three" />
-    <div className="structure-core"><span />{variant !== 'hero' && variant !== 'technology' && <b>L</b>}<small>INTELLIGENCE CORE</small></div>
+    <div className="structure-core"><span />{variant !== 'hero' && variant !== 'technology' && <b>L</b>}<small>{copy.structureCore}</small></div>
     <div className="structure-axis" /><div className="structure-beam beam-one" /><div className="structure-beam beam-two" />
     <div className="structure-satellite satellite-one" /><div className="structure-satellite satellite-two" />
   </div>
@@ -90,18 +86,28 @@ function CosmicScene({ variant, children }) {
 }
 
 function Nav() {
+  const { language, copy } = useHomepageLocale()
   const [open, setOpen] = useState(false)
-  const links = [['Company', '#company'], ['AI Workforce', '#workforce'], ['Product Ecosystem', '#ecosystem'], ['Contact', '#contact']]
-  const hrefFor = href => window.location.pathname === '/' ? href : `/${href}`
-  return <><a className="skip-link" href="#main-content">Skip to main content</a><header className="nav-wrap"><nav className="nav container" aria-label="Main navigation"><a className="brand" href={hrefFor('#top')}><span className="brand-mark">L</span><span>LEOKA</span></a><button type="button" className="menu-button" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="main-navigation" aria-label={open ? 'Close navigation menu' : 'Open navigation menu'}><span /><span /></button><div id="main-navigation" className={`nav-links ${open ? 'is-open' : ''}`}>{links.map(([label, href]) => <a key={href} href={hrefFor(href)} onClick={() => setOpen(false)}>{label}</a>)}<a className="nav-cta" href={workWithLeokaHref} onClick={() => setOpen(false)}>Work With LEOKA <Arrow /></a></div></nav></header></>
+  const links = copy.nav.links.map((label, index) => [label, ['#company', '#workforce', '#ecosystem', '#contact'][index]])
+  const hrefFor = href => localizedHref(language, href)
+  const languageHref = code => `${getLocalizedPath(code, window.location.pathname)}${window.location.search}${window.location.hash}`
+  return <><a className="skip-link" href="#main-content">{copy.nav.skip}</a><header className="nav-wrap"><nav className="nav container" aria-label={copy.nav.main}><a className="brand" href={hrefFor('#top')}><span className="brand-mark">L</span><span>LEOKA</span></a><button type="button" className="menu-button" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="main-navigation" aria-label={open ? copy.nav.close : copy.nav.open}><span /><span /></button><div id="main-navigation" className={`nav-links has-language ${open ? 'is-open' : ''}`}>{links.map(([label, href]) => <a key={href} href={hrefFor(href)} onClick={() => setOpen(false)}>{label}</a>)}<a className="nav-cta" href={workWithLeokaHref} onClick={() => setOpen(false)}>{copy.nav.workWith} <Arrow /></a><div className="language-switcher" role="group" aria-label={copy.nav.language}>{['en', 'uk'].map((code, index) => <span key={code} className="language-option-wrap">{index > 0 && <span className="language-separator" aria-hidden="true">|</span>}<a href={languageHref(code)} lang={code} className={`language-option ${language === code ? 'is-active' : ''}`} aria-current={language === code ? 'page' : undefined} aria-label={`${copy.nav.switchTo} ${copy.languageNames[code]}`} onClick={() => { saveHomepageLanguage(code); setOpen(false) }}>{code === 'uk' ? 'УКР' : 'EN'}</a></span>)}</div></div></nav></header></>
+}
+
+function localizedHref(language, href) {
+  if (href.startsWith('#')) return `${getLocalizedPath(language, '/')}${href}`
+  if (href.startsWith('/')) return getLocalizedPath(language, href)
+  return href
 }
 
 function Hero() {
-  return <section className="hero" id="top"><CosmicScene variant="hero"><OrbitalStructure /></CosmicScene><div className="hero-content container"><Reveal><p className="eyebrow"><span className="live-dot" /> AI-NATIVE TECHNOLOGY COMPANY</p><h1>LEOKA<br /><span>AI-NATIVE</span><br />TECHNOLOGY<br /><em>COMPANY.</em></h1><p className="hero-lede">We build software, intelligent systems and digital products through a specialized AI workforce.</p><div className="hero-actions"><a className="button button-primary" href="#company">Explore LEOKA <Arrow /></a><a className="text-link" href="#contact">Work With Us <Arrow /></a></div></Reveal></div><div className="hero-meta"><span>{SECTION_NUMBERS.hero} / 06</span><span>THE COMPANY THAT BUILDS THE TECHNOLOGY</span></div><div className="hero-scroll">SCROLL TO EXPLORE <i /></div></section>
+  const { copy } = useHomepageLocale(); const text = copy.hero
+  return <section className="hero" id="top"><CosmicScene variant="hero"><OrbitalStructure /></CosmicScene><div className="hero-content container"><Reveal><p className="eyebrow"><span className="live-dot" /> {text.eyebrow}</p><h1>{text.heading[0]}<br /><span>{text.heading[1]}</span><br />{text.heading[2]}<br /><em>{text.heading[3]}</em></h1><p className="hero-lede">{text.description}</p><div className="hero-actions"><a className="button button-primary" href="#company">{text.explore} <Arrow /></a><a className="text-link" href="#contact">{text.work} <Arrow /></a></div></Reveal></div><div className="hero-meta"><span>{SECTION_NUMBERS.hero} / 06</span><span>{text.meta}</span></div><div className="hero-scroll">{text.scroll} <i /></div></section>
 }
 
 function Company() {
-  return <section className="company section" id="company"><CosmicScene variant="company"><div className="geometry geometry-company" /><div className="geometry geometry-company-two" /></CosmicScene><div className="container company-grid"><Reveal><p className="section-kicker">{SECTION_NUMBERS.company} / THE COMPANY</p><h2>Built<br /><span>differently.</span></h2></Reveal><Reveal className="company-copy"><p className="large-copy">LEOKA is an AI-native technology company developing software, intelligent systems and digital products through a specialized AI workforce.</p><p>What makes us different is not a single AI model. It is the organization built around it — a new operating model for creating technology.</p><a className="text-link" href="#workforce">See how we operate <Arrow /></a></Reveal></div></section>
+  const { copy } = useHomepageLocale(); const text = copy.company
+  return <section className="company section" id="company"><CosmicScene variant="company"><div className="geometry geometry-company" /><div className="geometry geometry-company-two" /></CosmicScene><div className="container company-grid"><Reveal><p className="section-kicker">{SECTION_NUMBERS.company} / {text.kicker}</p><h2>{text.heading[0]}<br /><span>{text.heading[1]}</span></h2></Reveal><Reveal className="company-copy"><p className="large-copy">{text.introduction}</p><p>{text.description}</p><a className="text-link" href="#workforce">{text.link} <Arrow /></a></Reveal></div></section>
 }
 
 function SpaceBlock() {
@@ -217,6 +223,8 @@ function SpaceBlock() {
 // rendered section uses WorkforceEnergyCanvas instead.
 // eslint-disable-next-line no-unused-vars
 function WorkforceVisual({ active, onActivate }) {
+  const { copy } = useHomepageLocale()
+  const text = copy.workforce
   const canvasRef = useRef(null)
   const stageRef = useRef(null)
   const buttonRefs = useRef([])
@@ -317,7 +325,7 @@ function WorkforceVisual({ active, onActivate }) {
       for (let i = 0; i < 22; i += 1) { const a = TAU * (progress * (i % 2 ? -(2 + i % 3) : 2 + i % 3) + i / 22); const rr = coreRadius * (.32 + (i % 6) * .1 + .04 * Math.sin(phase * 3 + i)); context.fillStyle = i % 4 === 0 ? '#fff' : '#b889ff'; context.globalAlpha = .2 + .16 * pulse; context.beginPath(); context.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, i % 4 === 0 ? 1.35 : .7, 0, TAU); context.fill() }
       context.globalAlpha = 1
       for (let i = 0; i < 4; i += 1) { const coronaStart = phase * (i % 2 ? -1 : 1) + i * 1.7; const coronaEnd = coronaStart + .5 + .2 * Math.sin(phase * 2 + i); const corona = Array.from({ length: 9 }, (_, j) => { const t = j / 8; const angle = coronaStart + (coronaEnd - coronaStart) * t; const radius = coreRadius * (1.08 + .12 * Math.sin(TAU * t + phase * 2 + i)); return { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius } }); pathStroke(corona, 2.6, 'rgba(124,57,235,.42)', 8); pathStroke(corona, .55, 'rgba(255,245,255,.72)', 2) }
-      context.globalAlpha = 1; context.fillStyle = '#fff'; context.textAlign = 'center'; context.font = `600 ${Math.max(12, coreRadius * .28)}px ${getComputedStyle(stage).getPropertyValue('--mono') || 'monospace'}`; context.fillText('LEOKA', cx, cy - 2); context.fillStyle = '#cfb5f7'; context.font = `${Math.max(6, coreRadius * .105)}px monospace`; context.fillText('SHARED INTELLIGENCE', cx, cy + coreRadius * .24)
+      context.globalAlpha = 1; context.fillStyle = '#fff'; context.textAlign = 'center'; context.font = `600 ${Math.max(12, coreRadius * .28)}px ${getComputedStyle(stage).getPropertyValue('--mono') || 'monospace'}`; context.fillText('LEOKA', cx, cy - 2); context.fillStyle = '#cfb5f7'; context.font = `${Math.max(6, coreRadius * .105)}px monospace`; context.fillText(copy.workforce.canvasCoreText, cx, cy + coreRadius * .24)
       if (visible && document.visibilityState === 'visible' && !reduced) frame = requestAnimationFrame(draw)
     }
     const schedule = () => { if (!frame && visible && document.visibilityState === 'visible') frame = requestAnimationFrame(draw) }
@@ -325,18 +333,19 @@ function WorkforceVisual({ active, onActivate }) {
     const visibilityObserver = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; if (visible) schedule(); else if (frame) { cancelAnimationFrame(frame); frame = 0 } }, { rootMargin: '120px 0px' }); visibilityObserver.observe(stage)
     const onVisibility = () => { if (document.visibilityState !== 'visible' && frame) { cancelAnimationFrame(frame); frame = 0 } else schedule() }; document.addEventListener('visibilitychange', onVisibility)
     return () => { if (frame) cancelAnimationFrame(frame); stopObservingSize(); visibilityObserver.disconnect(); document.removeEventListener('visibilitychange', onVisibility) }
-  }, [])
+  }, [text.canvasCoreText])
 
   return <div ref={stageRef} className="workforce-visual" onPointerMove={(event) => { const rect = event.currentTarget.getBoundingClientRect(); pointerRef.current = { x: (event.clientX - rect.left - rect.width / 2) / rect.width * 10, y: (event.clientY - rect.top - rect.height / 2) / rect.height * 10 } }} onPointerLeave={() => { pointerRef.current = { x: 0, y: 0 } }}>
-    <canvas ref={canvasRef} role="img" aria-label="A living LEOKA intelligence core connected to six specialized AI employees" />
-    <div className="workforce-nodes">{departments.map(([name, role], i) => <button ref={(element) => { buttonRefs.current[i] = element }} key={name} className={`workforce-node ${active === i ? 'is-active' : ''}`} onMouseEnter={() => activateRef.current(i)} onFocus={() => activateRef.current(i)} onClick={() => activateRef.current(i)} aria-pressed={active === i}><span className="node-orb" /><span className="node-copy"><strong>{name}</strong><small>{role}</small></span></button>)}</div>
-    <div className="scene-caption">ONE COMPANY <i /> ONE ACCOUNTABLE ORGANIZATION</div>
+    <canvas ref={canvasRef} role="img" aria-label={text.canvasLabel} />
+    <div className="workforce-nodes">{text.departments.map(([name, role], i) => <button ref={(element) => { buttonRefs.current[i] = element }} key={name} className={`workforce-node ${active === i ? 'is-active' : ''}`} onMouseEnter={() => activateRef.current(i)} onFocus={() => activateRef.current(i)} onClick={() => activateRef.current(i)} aria-pressed={active === i}><span className="node-orb" /><span className="node-copy"><strong>{name}</strong><small>{role}</small></span></button>)}</div>
+    <div className="scene-caption"><span>{text.sceneCaption[0]}</span><i /><span>{text.sceneCaption[1]}</span></div>
   </div>
 }
 
 function Workforce() {
+  const { copy } = useHomepageLocale(); const text = copy.workforce
   const [active, setActive] = useState(0)
-  const [name, role] = departments[active]
+  const [name, role] = text.departments[active]
   const activate = useCallback((index) => setActive(index), [])
   const nodeRefs = useRef([])
   const nodeStyleCache = useRef([])
@@ -354,19 +363,12 @@ function Workforce() {
     if (cached.zIndex !== zIndex) { node.style.zIndex = zIndex; cached.zIndex = zIndex }
     if (cached.energy !== energy) { node.style.setProperty('--energy-hit', energy); cached.energy = energy }
   }, [])
-  return <section className="workforce section" id="workforce"><CosmicScene variant="workforce"><div className="workforce-nebula nebula-purple" /><div className="workforce-nebula nebula-blue" /><div className="constellation constellation-a" /><div className="constellation constellation-b" /></CosmicScene><div className="container workforce-layout"><Reveal className="workforce-copy"><p className="section-kicker">{SECTION_NUMBERS.workforce} / THE AI WORKFORCE</p><h2>An organization<br />of specialized<br /><span>intelligence.</span></h2><p className="workforce-lede">Human direction.<br />Machine specialization.</p><p className="workforce-micro">Six specialized AI employees.<br />One shared intelligence.</p></Reveal><Reveal className="workforce-stage"><WorkforceEnergyCanvas onNodePosition={onNodePosition}><div className="workforce-nodes">{departments.map(([nodeName, nodeRole], index) => <button ref={(element) => { nodeRefs.current[index] = element }} key={nodeName} className={`workforce-node ${active === index ? 'is-active' : ''}`} onMouseEnter={() => activate(index)} onFocus={() => activate(index)} onClick={() => activate(index)} aria-pressed={active === index}><span className="node-orb" /><span className="node-copy"><strong>{nodeName}</strong><small>{nodeRole}</small></span></button>)}</div><div className="scene-caption">ONE COMPANY <i /> ONE ACCOUNTABLE ORGANIZATION</div></WorkforceEnergyCanvas><div className="workforce-detail"><span className="eyebrow">ACTIVE EMPLOYEE / {name}</span><h3>{role}</h3><p>Specialized intelligence working inside one accountable organization.</p><span className="detail-line" /></div></Reveal></div></section>
+  return <section className="workforce section" id="workforce"><CosmicScene variant="workforce"><div className="workforce-nebula nebula-purple" /><div className="workforce-nebula nebula-blue" /><div className="constellation constellation-a" /><div className="constellation constellation-b" /></CosmicScene><div className="container workforce-layout"><Reveal className="workforce-copy"><p className="section-kicker">{SECTION_NUMBERS.workforce} / {text.kicker}</p><h2>{text.heading[0]}<br />{text.heading[1]}<br /><span>{text.heading[2]}</span></h2><p className="workforce-lede">{text.lede[0]}<br />{text.lede[1]}</p><p className="workforce-micro">{text.micro[0]}<br />{text.micro[1]}</p></Reveal><Reveal className="workforce-stage"><WorkforceEnergyCanvas ariaLabel={text.canvasLabel} sharedIntelligenceLabel={text.canvasCoreText} onNodePosition={onNodePosition}><div className="workforce-nodes">{text.departments.map(([nodeName, nodeRole], index) => <button ref={(element) => { nodeRefs.current[index] = element }} key={nodeName} className={`workforce-node ${active === index ? 'is-active' : ''}`} onMouseEnter={() => activate(index)} onFocus={() => activate(index)} onClick={() => activate(index)} aria-pressed={active === index}><span className="node-orb" /><span className="node-copy"><strong>{nodeName}</strong><small>{nodeRole}</small></span></button>)}</div><div className="scene-caption"><span>{text.sceneCaption[0]}</span><i /><span>{text.sceneCaption[1]}</span></div></WorkforceEnergyCanvas><div className="workforce-detail"><span className="eyebrow">{text.activeEmployee} / {name}</span><h3>{role}</h3><p>{text.roleDescription}</p><span className="detail-line" /></div></Reveal></div></section>
 }
 
-const methodSteps = [
-  ['VISION / STRATEGY', 'We define the challenge and align on outcomes that matter.', '◎'],
-  ['RESEARCH', 'Deep research and data intelligence reveal opportunities.', '⌁'],
-  ['PRODUCT', 'We design intelligent solutions built for real-world impact.', '◇'],
-  ['ENGINEERING', 'Our engineers build scalable, secure and efficient systems.', '⌘'],
-  ['QA / SECURITY', 'Rigorous testing and security ensure reliability you can trust.', '⊙'],
-  ['DEPLOYMENT', 'We deploy with precision and monitor every movement.', '↗'],
-  ['CONTINUOUS IMPROVEMENT', 'We learn, optimize and evolve — every single day.', '↻']
-]
+const methodStageGlyphs = ['◎', '⌁', '◇', '⌘', '⊙', '↗', '↻']
 function MethodVisual({ active, onActivate }) {
+  const { copy } = useHomepageLocale(); const text = copy.method
   const canvasRef = useRef(null)
   const stageRef = useRef(null)
   const nodeRefs = useRef([])
@@ -406,7 +408,7 @@ function MethodVisual({ active, onActivate }) {
     const drawLightning = (from, to, seed, progress, intensity) => { const dx = to.x - from.x; const dy = to.y - from.y; const length = Math.hypot(dx, dy) || 1; const nx = -dy / length; const ny = dx / length; const flash = Math.max(0, Math.sin(TAU * (progress * 3 + seed)) ** 14); const power = intensity * (.12 + flash * .88); const points = Array.from({ length: mobile ? 8 : 13 }, (_, i) => { const t = i / (mobile ? 7 : 12); const wobble = Math.sin(i * 2.7 + seed * 12 + progress * TAU * 2) * Math.sin(Math.PI * t); return { x: from.x + dx * t + nx * wobble * 24, y: from.y + dy * t + ny * wobble * 24 } }); stroke(points, `rgba(96,31,205,${power * .2})`, 12 * power, 28); stroke(points, `rgba(183,111,255,${power * .5})`, 2.5 * power, 10); stroke(points, `rgba(255,250,255,${power * .78})`, .65 + power, 3) }
     const drawPlanet = (planet, point, index, progress, activeIndex) => { const depth = .74 + point.z * .18; const r = Math.max(10, Math.min(width, height) * .033 * planet.size * depth); const activeEnergy = index === activeIndex ? 1 : .42; const light = ctx.createRadialGradient(point.x - r * .35, point.y - r * .42, r * .08, point.x, point.y, r * 1.35); const color = index === 0 ? ['#eee2ff', '#7e46cf', '#170b31'] : index === 1 ? ['#9883cc', '#39255d', '#090713'] : index === 2 ? ['#f0d7ff', '#7544b8', '#151027'] : index === 3 ? ['#fff', '#8b4fff', '#2b0b4e'] : index === 4 ? ['#73628f', '#201b38', '#05050b'] : index === 5 ? ['#e7d6ff', '#5e37a0', '#10091d'] : ['#fff', '#6a3ab2', '#0d071c']; light.addColorStop(0, color[0]); light.addColorStop(.28, color[1]); light.addColorStop(1, color[2]); ctx.save(); ctx.globalAlpha = .62 + depth * .3; ctx.shadowColor = '#9b5cff'; ctx.shadowBlur = 14 + activeEnergy * 14; ctx.fillStyle = light; ctx.beginPath(); ctx.arc(point.x, point.y, r, 0, TAU); ctx.fill(); ctx.shadowBlur = 0; ctx.globalAlpha = .34 + activeEnergy * .42; ctx.strokeStyle = '#d8baff'; ctx.lineWidth = 1; if (index === 0 || index === 4) { ctx.beginPath(); ctx.ellipse(point.x, point.y, r * 1.7, r * .42, planet.tilt, 0, TAU); ctx.stroke() } if (index === 2) { ctx.strokeStyle = '#fff0ff'; for (let line = -1; line < 2; line += 1) { ctx.beginPath(); ctx.moveTo(point.x - r * .7, point.y + line * r * .35); ctx.lineTo(point.x + r * .7, point.y - line * r * .35); ctx.stroke() } } if (index === 3 || index === 6) { const storm = Math.sin(TAU * (progress * 4 + index * .13)); ctx.beginPath(); ctx.arc(point.x - r * .1, point.y, r * (.5 + storm * .12), .3, 2.7); ctx.stroke() } if (index === 1 || index === 5 || index === 6) { const moon = pointForMoon(point, r, index, progress); ctx.fillStyle = '#e9d9ff'; ctx.globalAlpha = .55; ctx.beginPath(); ctx.arc(moon.x, moon.y, Math.max(2, r * .13), 0, TAU); ctx.fill() } ctx.restore(); return r }
     const pointForMoon = (point, radius, index, progress) => { const angle = progress * TAU * (2 + index * .17) + index; return { x: point.x + Math.cos(angle) * radius * 2.1, y: point.y + Math.sin(angle) * radius * 1.2 } }
-    const draw = (now) => { frame = 0; const rawProgress = reduced ? 0 : (((now - startTime) % LOOP_DURATION) / LOOP_DURATION); const progress = rawProgress >= 1 ? 0 : rawProgress; const phase = progress * TAU; const activeIndex = Math.floor(progress * methodSteps.length) % methodSteps.length; const c = center(); const radius = Math.min(width, height); const pulse = .5 + .5 * Math.sin(phase * 2); if (activeIndex !== lastStage) { lastStage = activeIndex; onActivate(activeIndex) } ctx.clearRect(0, 0, width, height)
+      const draw = (now) => { frame = 0; const rawProgress = reduced ? 0 : (((now - startTime) % LOOP_DURATION) / LOOP_DURATION); const progress = rawProgress >= 1 ? 0 : rawProgress; const phase = progress * TAU; const activeIndex = Math.floor(progress * methodStageGlyphs.length) % methodStageGlyphs.length; const c = center(); const radius = Math.min(width, height); const pulse = .5 + .5 * Math.sin(phase * 2); if (activeIndex !== lastStage) { lastStage = activeIndex; onActivate(activeIndex) } ctx.clearRect(0, 0, width, height)
       const haze = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, radius * 1.15); haze.addColorStop(0, `rgba(101,47,196,${.16 + pulse * .06})`); haze.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = haze; ctx.fillRect(0, 0, width, height)
       stars.forEach((star, i) => { const x = star.x * width + Math.sin(phase * (i % 2 ? 1 : -1) + star.phase) * 4; const y = star.y * height + Math.cos(phase + star.phase) * 3; ctx.globalAlpha = .08 + .14 * (.5 + .5 * Math.sin(phase * (1 + i % 3) + star.phase)); ctx.fillStyle = i % 13 === 0 ? '#fff' : '#c6a8ff'; ctx.beginPath(); ctx.arc(x, y, star.size, 0, TAU); ctx.fill() }); ctx.globalAlpha = 1
       dust.forEach((particle, i) => { const a = particle.angle + phase * particle.speed; const r = particle.radius * radius * .72; ctx.globalAlpha = .08 + .12 * (.5 + .5 * Math.sin(phase * 2 + particle.phase)); ctx.fillStyle = i % 5 ? '#8f63d8' : '#efe4ff'; ctx.beginPath(); ctx.arc(c.x + Math.cos(a) * r, c.y + Math.sin(a) * r * .58, 1 + (i % 3) * .35, 0, TAU); ctx.fill() }); ctx.globalAlpha = 1
@@ -429,91 +431,139 @@ function MethodVisual({ active, onActivate }) {
     return () => { if (frame) cancelAnimationFrame(frame); stopObservingSize(); intersection.disconnect(); document.removeEventListener('visibilitychange', onVisibility) }
   }, [onActivate])
 
-  const [title, description] = methodSteps[active]
-  return <div ref={stageRef} id="method-visual" className="method-visual" data-loop-duration="48000" aria-label="A cinematic deep-space solar system representing the seven stages of the LEOKA method"><canvas ref={canvasRef} aria-hidden="true" /><div className="method-core-content"><div className="core-brand" aria-label="LEOKA intelligence core"><b>LEOKA</b><span>INTELLIGENCE CORE</span></div><div className="core-divider" aria-hidden="true" /><div className="active-stage" key={active} aria-live="polite"><small>{String(active + 1).padStart(2, '0')}</small><strong>{title}</strong><p>{description}</p></div></div><div className="method-nodes">{methodSteps.map(([nodeTitle], index) => <button ref={(element) => { nodeRefs.current[index] = element }} key={nodeTitle} className={`method-node method-node-${index} ${active === index ? 'is-active' : ''}`} onMouseEnter={() => onActivate(index)} onFocus={() => onActivate(index)} onClick={() => onActivate(index)} aria-pressed={active === index}><span className="method-node-label"><small>{String(index + 1).padStart(2, '0')}</small><strong>{nodeTitle}</strong></span></button>)}</div></div>
+  const [title, description] = text.steps[active]
+  return <div ref={stageRef} id="method-visual" className="method-visual" data-loop-duration="48000" aria-label={text.visualLabel}><canvas ref={canvasRef} aria-hidden="true" /><div className="method-core-content"><div className="core-brand" aria-label={text.coreAria}><b>LEOKA</b><span>{text.coreLabel}</span></div><div className="core-divider" aria-hidden="true" /><div className="active-stage" key={active} aria-live="polite"><small>{String(active + 1).padStart(2, '0')}</small><strong>{title}</strong><p>{description}</p></div></div><div className="method-nodes">{text.steps.map(([nodeTitle], index) => <button ref={(element) => { nodeRefs.current[index] = element }} key={nodeTitle} className={`method-node method-node-${index} ${active === index ? 'is-active' : ''}`} onMouseEnter={() => onActivate(index)} onFocus={() => onActivate(index)} onClick={() => onActivate(index)} aria-pressed={active === index}><span className="method-node-label"><small>{String(index + 1).padStart(2, '0')}</small><strong>{nodeTitle}</strong></span></button>)}</div></div>
 }
 
 function Workflow() {
+  const { copy } = useHomepageLocale(); const text = copy.method
   const [active, setActive] = useState(0)
-  return <section className="workflow section" id="method"><div className="method-space" aria-hidden="true" /><MethodVisual active={active} onActivate={setActive} /><div className="container workflow-layout"><Reveal className="workflow-copy"><p className="section-kicker">{SECTION_NUMBERS.workflow} / OUR METHOD</p><h2>Human vision.<br /><span>Systematic execution.</span></h2><p className="workflow-lede">We follow a continuous cycle of research, engineering, and refinement to build reliable AI solutions that create real impact.</p><a className="text-link" href="#method-visual">Explore our process <Arrow /></a><div className="workflow-active"><span>ACTIVE STAGE</span><strong>{methodSteps[active][0]}</strong></div></Reveal></div></section>
+  return <section className="workflow section" id="method"><div className="method-space" aria-hidden="true" /><MethodVisual active={active} onActivate={setActive} /><div className="container workflow-layout"><Reveal className="workflow-copy"><p className="section-kicker">{SECTION_NUMBERS.workflow} / {text.kicker}</p><h2>{text.heading[0]}<br /><span>{text.heading[1]}</span></h2><p className="workflow-lede">{text.description}</p><a className="text-link" href="#method-visual">{text.explore} <Arrow /></a><div className="workflow-active"><span>{text.activeStage}</span><strong>{text.steps[active][0]}</strong></div></Reveal></div></section>
 }
 
 function EcosystemNode({ item, index, active, onActivate }) {
-  const [num, title, copy, type] = item
+  const { copy } = useHomepageLocale(); const [num, title, description, type] = item
   return <article className={`ecosystem-node node-${index} ${active === index ? 'active' : ''}`} onMouseEnter={() => onActivate(index)}>
-    <span className="node-index">{num}</span><span className={`node-glyph glyph-${type}`} aria-hidden="true"><i /><b /></span><span className="node-category">LEOKA PRODUCT SYSTEM</span><strong>{title}</strong><small>{copy}</small><span className="node-link">VIEW SYSTEM <Arrow /></span>
+    <span className="node-index">{num}</span><span className={`node-glyph glyph-${type}`} aria-hidden="true"><i /><b /></span><span className="node-category">{copy.ecosystem.nodeCategory}</span><strong>{title}</strong><small>{description}</small><span className="node-link">{copy.ecosystem.viewSystem} <Arrow /></span>
   </article>
 }
 
 function EcosystemVisual() {
+  const { copy } = useHomepageLocale()
   const [active, setActive] = useState(0)
   return <div className="ecosystem-visual">
     <div className="ecosystem-aura" /><div className="ecosystem-orbit ecosystem-orbit-one" /><div className="ecosystem-orbit ecosystem-orbit-two" />
     <div className="ecosystem-lines" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
-    <div className="ecosystem-core"><span className="core-signal" /><b>LEOKA</b><strong>PRODUCT<br />ECOSYSTEM</strong><small>BUILT BY LEOKA</small></div>
-    {productSystems.map((item, i) => <EcosystemNode key={item[1]} item={item} index={i} active={active} onActivate={setActive} />)}
+    <div className="ecosystem-core"><span className="core-signal" /><b>LEOKA</b><strong>{copy.ecosystem.coreTitle[0]}<br />{copy.ecosystem.coreTitle[1]}</strong><small>{copy.ecosystem.coreCaption}</small></div>
+    {productSystems.map(([num, type], i) => <EcosystemNode key={num} item={[num, ...copy.ecosystem.systems[i], type]} index={i} active={active} onActivate={setActive} />)}
     <div className="ecosystem-particle particle-one" /><div className="ecosystem-particle particle-two" /><div className="ecosystem-particle particle-three" />
   </div>
 }
 
 function Ecosystem() {
-  return <section className="ecosystem section" id="ecosystem"><CosmicScene variant="ecosystem"><div className="ecosystem-grid-glow" /><div className="planet-arc" /><div className="planet-arc planet-arc-two" /></CosmicScene><div className="container ecosystem-content"><Reveal className="section-heading"><div><p className="section-kicker">{SECTION_NUMBERS.ecosystem} / BUILT BY LEOKA</p><h2>One company.<br /><span>Many intelligent systems.</span></h2></div><p>Technology designed,<br />engineered and operated by LEOKA.</p></Reveal><Reveal className="ecosystem-intro"><p>LEOKA builds software products designed to solve real business problems. Our product systems bring specialized capabilities together into one intelligent environment.</p><div className="ecosystem-actions">{productUrl ? <a className="button button-primary" href={productUrl} target="_blank" rel="noopener noreferrer">Explore the Product <Arrow /></a> : <span className="button button-primary button-disabled" aria-disabled="true" title="Product URL not configured">Explore the Product <Arrow /></span>}<a className="text-link" href={workWithLeokaHref}>Work With LEOKA <Arrow /></a></div></Reveal><Reveal><EcosystemVisual /></Reveal><p className="ecosystem-note">PRODUCT REGISTRY / The public application registry is not configured in this build. Systems shown are the existing LEOKA build definitions.</p></div></section>
+  const { copy } = useHomepageLocale(); const text = copy.ecosystem
+  return <section className="ecosystem section" id="ecosystem"><CosmicScene variant="ecosystem"><div className="ecosystem-grid-glow" /><div className="planet-arc" /><div className="planet-arc planet-arc-two" /></CosmicScene><div className="container ecosystem-content"><Reveal className="section-heading"><div><p className="section-kicker">{SECTION_NUMBERS.ecosystem} / {text.kicker}</p><h2>{text.heading[0]}<br /><span>{text.heading[1]}</span></h2></div><p>{text.subheading[0]}<br />{text.subheading[1]}</p></Reveal><Reveal className="ecosystem-intro"><p>{text.introduction}</p><div className="ecosystem-actions">{productUrl ? <a className="button button-primary" href={productUrl} target="_blank" rel="noopener noreferrer">{text.exploreProduct} <Arrow /></a> : <span className="button button-primary button-disabled" aria-disabled="true" title={text.productUrlMissing}>{text.exploreProduct} <Arrow /></span>}<a className="text-link" href={workWithLeokaHref}>{copy.footer.workWith} <Arrow /></a></div></Reveal><Reveal><EcosystemVisual /></Reveal><p className="ecosystem-note"><span>{text.registryLabel}</span> / {text.registryNote}</p></div></section>
 }
 
 function NextBuild() {
-  return <section className="next-build section" id="next-build"><CosmicScene variant="technology"><OrbitalStructure variant="technology" /></CosmicScene><div className="container next-build-content"><div className="cta-content next-build-copy"><Reveal><p className="section-kicker">{SECTION_NUMBERS.nextBuild} / THE NEXT BUILD</p><h2>We build what<br /><span>comes next.</span></h2><p>Explore the technologies, AI systems, and digital products being developed by LEOKA.</p><a className="button button-primary" href="https://info.scoutlyai.us" target="_blank" rel="noopener noreferrer" aria-label="Explore LEOKA developments">Explore our developments <Arrow /></a></Reveal></div></div></section>
+  const { copy } = useHomepageLocale(); const text = copy.nextBuild
+  return <section className="next-build section" id="next-build"><CosmicScene variant="technology"><OrbitalStructure variant="technology" /></CosmicScene><div className="container next-build-content"><div className="cta-content next-build-copy"><Reveal><p className="section-kicker">{SECTION_NUMBERS.nextBuild} / {text.kicker}</p><h2>{text.heading[0]}<br /><span>{text.heading[1]}</span></h2><p>{text.description}</p><a className="button button-primary" href="https://info.scoutlyai.us" target="_blank" rel="noopener noreferrer" aria-label={text.actionAria}>{text.action} <Arrow /></a></Reveal></div></div></section>
 }
 
-const footerCompany = [['About', '#company'], ['AI Workforce', '#workforce'], ['Our Method', '#method'], ['Contact', '#contact']]
-const footerCapabilities = [['Software', '#ecosystem'], ['AI Systems', '#ecosystem'], ['Digital Products', '#ecosystem'], ['Automation', '#ecosystem'], ['Data Infrastructure', '#ecosystem'], ['Intelligent Platforms', '#ecosystem']]
-const footerLegal = [['Terms of Service', '/terms'], ['Privacy Policy', '/privacy'], ['Cookie Policy', '/cookies'], ['Accessibility', '/accessibility']]
-
 function FooterColumn({ title, links }) {
-  const hrefFor = href => href.startsWith('#') && window.location.pathname !== '/' ? `/${href}` : href
+  const { language } = useHomepageLocale()
+  const hrefFor = href => localizedHref(language, href)
   return <div className="footer-column"><h3>{title}</h3><ul className="footer-links">{links.map(([label, href]) => <li key={href + label}><a className="footer-link" href={hrefFor(href)}>{label}</a></li>)}</ul></div>
 }
 
 function Footer() {
+  const { language, copy } = useHomepageLocale(); const text = copy.footer
   const year = new Date().getFullYear()
-  const hrefFor = href => window.location.pathname === '/' ? href : `/${href}`
-  return <footer className="site-footer" id="contact"><div className="footer-container"><div className="footer-cta"><div><p className="footer-kicker">START A CONVERSATION</p><h2>Build with <span>intelligence.</span></h2></div><a className="footer-cta-link" href={workWithLeokaHref}>Work with LEOKA <Arrow /></a></div><div className="footer-grid"><div className="footer-brand-column"><a className="footer-brand" href={hrefFor('#top')} aria-label="LEOKA home"><span className="footer-brand-mark">L</span><span>LEOKA</span></a><p className="footer-description">AI-native technology company building specialized intelligence, software, and intelligent systems.</p><p className="footer-company-details">Operated by {company.legalName}<br />{company.address[0]}<br />{company.address[1]}<br />{company.address[2]}<br /><a href={`mailto:${company.email}`}>{company.email}</a></p></div><FooterColumn title="COMPANY" links={footerCompany} /><FooterColumn title="CAPABILITIES" links={footerCapabilities} /><div className="footer-column"><h3>CONTACT</h3><ul className="footer-links"><li><a className="footer-link footer-contact-link" href={workWithLeokaHref}>Work with LEOKA <Arrow /></a></li><li><a className="footer-link" href={hrefFor('#contact')}>Start a conversation</a></li></ul></div><FooterColumn title="LEGAL" links={footerLegal} /></div><div className="footer-legal-bar"><span>© {year} LEOKA. All rights reserved.</span><nav className="footer-legal-links" aria-label="Legal navigation"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/cookies">Cookies</a><a href="/accessibility">Accessibility</a></nav></div></div></footer>
+  const hrefFor = href => localizedHref(language, href)
+  return <footer className="site-footer" id="contact"><div className="footer-container"><div className="footer-cta"><div><p className="footer-kicker">{text.kicker}</p><h2>{text.heading[0]} <span>{text.heading[1]}</span></h2></div><a className="footer-cta-link" href={workWithLeokaHref}>{text.workWith} <Arrow /></a></div><div className="footer-grid"><div className="footer-brand-column"><a className="footer-brand" href={hrefFor('#top')} aria-label={text.brandAria}><span className="footer-brand-mark">L</span><span>LEOKA</span></a><p className="footer-description">{text.description}</p><p className="footer-company-details">{text.operatedBy} {company.legalName}<br />{company.address[0]}<br />{company.address[1]}<br />{company.address[2]}<br /><a href={`mailto:${company.email}`}>{company.email}</a></p></div><FooterColumn title={text.companyTitle} links={text.companyLinks} /><FooterColumn title={text.capabilitiesTitle} links={text.capabilityLinks} /><div className="footer-column"><h3>{text.contactTitle}</h3><ul className="footer-links"><li><a className="footer-link footer-contact-link" href={workWithLeokaHref}>{text.workWith} <Arrow /></a></li><li><a className="footer-link" href={hrefFor('#contact')}>{text.startConversation}</a></li></ul></div><FooterColumn title={text.legalTitle} links={text.legalLinks} /></div><div className="footer-legal-bar"><span>© {year} LEOKA. {text.copyright}</span><nav className="footer-legal-links" aria-label={text.legalNavigation}>{text.legalBarLinks.map(([label, href]) => <a key={href} href={hrefFor(href)}>{label}</a>)}</nav></div></div></footer>
+}
+
+function updatePageMetadata({ language, title, description, imageAlt, noIndex = false }) {
+  const path = window.location.pathname
+  const origin = siteUrl || window.location.origin
+  const canonicalUrl = `${origin}${path}`
+  const canonical = document.querySelector('link[rel="canonical"]') || document.createElement('link')
+  canonical.rel = 'canonical'
+  canonical.href = canonicalUrl
+  if (!canonical.isConnected) document.head.appendChild(canonical)
+  document.documentElement.lang = language
+  document.title = title
+  setMetaContent('meta[name="description"]', description)
+  setMetaContent('meta[property="og:title"]', title)
+  setMetaContent('meta[property="og:description"]', description)
+  setMetaContent('meta[property="og:url"]', canonicalUrl)
+  setMetaContent('meta[property="og:image"]', `${origin}/og-image.svg`)
+  setMetaContent('meta[property="og:image:alt"]', imageAlt)
+  setMetaContent('meta[name="twitter:title"]', title)
+  setMetaContent('meta[name="twitter:description"]', description)
+  setMetaContent('meta[name="twitter:image"]', `${origin}/og-image.svg`)
+  setMetaContent('meta[name="twitter:image:alt"]', imageAlt)
+  setMetaContent('meta[name="robots"]', noIndex ? 'noindex,follow' : 'index,follow')
+
+  for (const code of ['en', 'uk']) {
+    const alternate = document.querySelector(`link[rel="alternate"][hreflang="${code}"]`) || document.createElement('link')
+    alternate.rel = 'alternate'
+    alternate.hreflang = code
+    alternate.href = `${origin}${getLocalizedPath(code, path)}`
+    if (!alternate.isConnected) document.head.appendChild(alternate)
+  }
+  const defaultAlternate = document.querySelector('link[rel="alternate"][hreflang="x-default"]') || document.createElement('link')
+  defaultAlternate.rel = 'alternate'
+  defaultAlternate.hreflang = 'x-default'
+  defaultAlternate.href = `${origin}${getRoutePath(path).isHome ? '/' : getLocalizedPath('en', path)}`
+  if (!defaultAlternate.isConnected) document.head.appendChild(defaultAlternate)
+}
+
+function PageMetadata({ language, title, description, noIndex = false }) {
+  const imageAlt = homepageTranslations[language].seo.imageAlt
+  useLayoutEffect(() => {
+    updatePageMetadata({ language, title, description, imageAlt, noIndex })
+  }, [language, title, description, imageAlt, noIndex])
+  return null
 }
 
 function LegalPage({ page }) {
-  useEffect(() => {
-    const title = page.metaTitle || `${page.title} — LEOKA`
-    document.title = title
-    const description = document.querySelector('meta[name="description"]')
-    if (description) description.setAttribute('content', page.description)
-    let canonical = document.querySelector('link[rel="canonical"]')
-    if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.appendChild(canonical) }
-    canonical.href = siteUrl ? `${siteUrl}${window.location.pathname}` : window.location.pathname || '/'
-    setMetaContent('meta[property="og:url"]', siteUrl ? `${siteUrl}${window.location.pathname}` : window.location.pathname || '/')
-    setMetaContent('meta[property="og:image"]', siteUrl ? `${siteUrl}/og-image.svg` : '/og-image.svg')
-    setMetaContent('meta[name="twitter:image"]', siteUrl ? `${siteUrl}/og-image.svg` : '/og-image.svg')
-    return () => { document.title = 'LEOKA — AI-Native Technology Company'; if (description) description.setAttribute('content', siteDescription) }
-  }, [page])
+  const { language, copy } = useHomepageLocale()
+  const title = page.metaTitle || `${page.title} — LEOKA`
   const renderBlock = (block) => {
     if (typeof block === 'string') return <p key={block}>{block}</p>
-    if (block.type === 'link') return <p key={block.href}><a className="legal-inline-link" href={block.href}>{block.label} <Arrow /></a></p>
+    if (block.type === 'link') return <p key={block.href}><a className="legal-inline-link" href={localizedHref(language, block.href)}>{block.label} <Arrow /></a></p>
     if (block.type === 'list') return <ul key={block.items.join('|')}>{block.items.map(item => <li key={item}>{item}</li>)}</ul>
     return <p key={block.text}>{block.text}</p>
   }
-  return <><Nav /><main id="main-content" className="legal-page"><article className="legal-shell"><p className="legal-eyebrow">{page.eyebrow}</p><h1>{page.title}</h1><p className="legal-intro">{page.description}</p><p className="legal-updated">Last Updated: {page.lastUpdated || 'August 11, 2026'}</p><div className="legal-content">{page.sections.map(([heading, blocks]) => <section key={heading}><h2>{heading}</h2>{blocks.map(renderBlock)}</section>)}</div><a className="legal-back" href="/#top">← Back to LEOKA</a></article></main><Footer /></>
+  return <><PageMetadata language={language} title={title} description={page.description} /><Nav /><main id="main-content" className="legal-page"><article className="legal-shell"><p className="legal-eyebrow">{page.eyebrow}</p><h1>{page.title}</h1><p className="legal-intro">{page.description}</p><p className="legal-updated">{copy.legal.lastUpdated}: {page.lastUpdated || 'August 11, 2026'}</p><div className="legal-content">{page.sections.map(([heading, blocks]) => <section key={heading}><h2>{heading}</h2>{blocks.map(renderBlock)}</section>)}</div><a className="legal-back" href={localizedHref(language, '#top')}>{copy.legal.back} <Arrow /></a></article></main><Footer /></>
 }
 
 function NotFound() {
-  useEffect(() => { document.title = 'Page Not Found — LEOKA'; return () => { document.title = 'LEOKA — AI-Native Technology Company' } }, [])
-  return <><Nav /><main id="main-content" className="legal-page"><div className="legal-shell"><p className="legal-eyebrow">LEOKA / 404</p><h1>Signal not found.</h1><p className="legal-intro">The page you requested does not exist or has moved.</p><a className="legal-back" href="/">← Return to LEOKA</a></div></main><Footer /></>
+  const { language, copy } = useHomepageLocale()
+  return <><PageMetadata language={language} title={copy.notFound.title} description={copy.notFound.description} noIndex /><Nav /><main id="main-content" className="legal-page"><div className="legal-shell"><p className="legal-eyebrow">LEOKA / 404</p><h1>{copy.notFound.heading}</h1><p className="legal-intro">{copy.notFound.description}</p><a className="legal-back" href={localizedHref(language, '/')}>{copy.notFound.back} <Arrow /></a></div></main><Footer /></>
+}
+
+function Homepage() {
+  const { language, copy } = useHomepageLocale()
+  useEffect(() => {
+    const observer = new IntersectionObserver(entries => entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('visible')
+    }), { threshold: .12 })
+    document.querySelectorAll('.reveal').forEach(element => observer.observe(element))
+    return () => observer.disconnect()
+  }, [])
+  return <><PageMetadata language={language} title={copy.seo.title} description={copy.seo.description} /><Nav /><main id="main-content"><Hero /><Company /><Workforce /><SpaceBlock /><Workflow /><Ecosystem /><NextBuild /></main><Footer /></>
 }
 
 function App() {
-  const legalKey = window.location.pathname.replace(/^\//, '').replace(/\/$/, '')
-  const page = legalPages[legalKey]
-  useEffect(() => { if (page) return undefined; const observer = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible') }), { threshold: .12 }); document.querySelectorAll('.reveal').forEach(el => observer.observe(el)); return () => observer.disconnect() }, [page])
-  if (window.location.pathname !== '/' && !page) return <NotFound />
-  if (page) return <LegalPage page={page} />
-  return <><Nav /><main id="main-content"><Hero /><Company /><Workforce /><SpaceBlock /><Workflow /><Ecosystem /><NextBuild /></main><Footer /></>
+  const route = getRoutePath(window.location.pathname)
+  const language = route.language || initialLocaleLanguage
+  const page = route.isLegalPage ? getLocalizedLegalPage(route.pageKey, language) : null
+  const copy = homepageTranslations[language]
+  return <HomepageLocaleContext.Provider value={{ language, copy }}>
+    {route.isHome ? <Homepage /> : page ? <LegalPage page={page} /> : <NotFound />}
+  </HomepageLocaleContext.Provider>
 }
 
 createRoot(document.getElementById('root')).render(<StrictMode><App /></StrictMode>)
