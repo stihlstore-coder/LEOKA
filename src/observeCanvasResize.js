@@ -1,19 +1,19 @@
-export function observeCanvasResize(element, resize) {
+export function observeCanvasResize(element, resize, canResize = () => true) {
   let frame = 0
   let disposed = false
 
   // Defer backing-store changes until after ResizeObserver delivery. Resizing
   // a canvas in the observer callback can trigger WebKit's loop warning.
   const observer = new ResizeObserver(() => {
-    if (frame || disposed) return
+    if (frame || disposed || !canResize()) return
     frame = requestAnimationFrame(() => {
       frame = 0
-      if (!disposed) resize()
+      if (!disposed && canResize()) resize()
     })
   })
 
   observer.observe(element)
-  resize()
+  if (canResize()) resize()
 
   return () => {
     disposed = true

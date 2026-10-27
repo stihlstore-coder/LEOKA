@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { observeCanvasLifecycle, releaseCanvasBackingStore } from './canvasLifecycle.js'
 import { observeCanvasResize } from './observeCanvasResize.js'
 
 const TAU = Math.PI * 2
@@ -66,7 +67,7 @@ function WorkforceEnergyCanvas({ onNodePosition, children, ariaLabel = 'A living
 
     const resize = () => {
       const rect = stage.getBoundingClientRect()
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.25 : 2)
       width = rect.width
       height = rect.height
       const pixelWidth = Math.max(1, Math.floor(width * dpr))
@@ -212,21 +213,33 @@ function WorkforceEnergyCanvas({ onNodePosition, children, ariaLabel = 'A living
         context.globalAlpha = .16 + corePulse * .13; context.fillStyle = i % 5 === 0 ? '#fff' : '#ae7bff'; context.beginPath(); context.arc(c.x + Math.cos(a) * radius, c.y + Math.sin(a) * radius, i % 4 === 0 ? 1.2 : .65, 0, TAU); context.fill()
       }
       context.globalAlpha = 1; context.fillStyle = '#fff'; context.textAlign = 'center'; context.font = `600 ${Math.max(12, coreRadius * .28)}px var(--mono)`; context.fillText('LEOKA', c.x, c.y - 2); context.fillStyle = '#cdb4f3'; context.font = `${Math.max(6, coreRadius * .105)}px var(--mono)`; context.fillText(sharedIntelligenceLabel, c.x, c.y + coreRadius * .24)
-      if (visible && document.visibilityState === 'visible' && !reduced) frame = requestAnimationFrame(draw)
+      if (!reduced && lifecycle.canRun()) schedule()
     }
 
     const schedule = () => {
-      if (!frame && visible && document.visibilityState === 'visible') frame = requestAnimationFrame(draw)
+      if (!frame && lifecycle?.canRun()) frame = requestAnimationFrame(draw)
     }
+    const cancel = () => {
+      if (frame) cancelAnimationFrame(frame)
+      frame = 0
+    }
+    const lifecycle = observeCanvasLifecycle({ canvas, isInView: () => visible, resize, schedule, cancel })
     const stopObservingSize = observeCanvasResize(stage, () => {
       resize()
       schedule()
-    })
-    const visibilityObserver = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; if (visible) schedule(); else if (frame) { cancelAnimationFrame(frame); frame = 0 } }, { rootMargin: '120px 0px' })
+    }, lifecycle.canRun)
+    const visibilityObserver = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting
+      if (visible) {
+        if (lifecycle.canRun()) resize()
+        schedule()
+      } else {
+        cancel()
+        releaseCanvasBackingStore(canvas)
+      }
+    }, { rootMargin: '120px 0px' })
     visibilityObserver.observe(stage)
-    const onVisibility = () => { if (document.visibilityState !== 'visible' && frame) { cancelAnimationFrame(frame); frame = 0 } else schedule() }
-    document.addEventListener('visibilitychange', onVisibility)
-    return () => { if (frame) cancelAnimationFrame(frame); stopObservingSize(); visibilityObserver.disconnect(); document.removeEventListener('visibilitychange', onVisibility) }
+    return () => { lifecycle.dispose(); stopObservingSize(); visibilityObserver.disconnect() }
   }, [sharedIntelligenceLabel])
 
   return <div ref={stageRef} className="workforce-visual"><canvas ref={canvasRef} role="img" aria-label={ariaLabel} />{children}</div>

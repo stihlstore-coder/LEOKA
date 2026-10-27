@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { observeCanvasLifecycle, releaseCanvasBackingStore } from './canvasLifecycle.js'
 import { observeCanvasResize } from './observeCanvasResize.js'
 
 const TAU = Math.PI * 2
@@ -140,33 +141,43 @@ function DynamicEnergyCanvas({ variant = 'default' }) {
       ctx.globalAlpha = 1
       arcs.forEach((arc, index) => drawArc(arc, progress, index))
       if (reduced) return
-      if (visible && document.visibilityState === 'visible') frame = requestAnimationFrame(draw)
+      if (!reduced && lifecycle.canRun()) schedule()
     }
 
     const schedule = () => {
-      if (!frame && visible && document.visibilityState === 'visible') frame = requestAnimationFrame(draw)
+      if (!frame && lifecycle?.canRun()) frame = requestAnimationFrame(draw)
     }
+    const cancel = () => {
+      if (frame) cancelAnimationFrame(frame)
+      frame = 0
+    }
+    const lifecycle = observeCanvasLifecycle({
+      canvas,
+      isInView: () => visible,
+      resize,
+      schedule,
+      cancel,
+    })
     const stopObservingSize = observeCanvasResize(stage, () => {
       resize()
       schedule()
-    })
+    }, lifecycle.canRun)
     const visibilityObserver = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting
-      if (visible) schedule()
-      else if (frame) { cancelAnimationFrame(frame); frame = 0 }
+      if (visible) {
+        if (lifecycle.canRun()) resize()
+        schedule()
+      } else {
+        cancel()
+        releaseCanvasBackingStore(canvas)
+      }
     }, { rootMargin: '120px 0px' })
     visibilityObserver.observe(stage)
-    const onVisibility = () => {
-      if (document.visibilityState !== 'visible' && frame) { cancelAnimationFrame(frame); frame = 0 }
-      else schedule()
-    }
-    document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
-      if (frame) cancelAnimationFrame(frame)
+      lifecycle.dispose()
       stopObservingSize()
       visibilityObserver.disconnect()
-      document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [variant])
 

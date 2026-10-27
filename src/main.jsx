@@ -8,6 +8,7 @@ import './footer.css'
 import './space-transition.css'
 import DynamicEnergyCanvas from './DynamicEnergyCanvas.jsx'
 import WorkforceEnergyCanvas from './WorkforceEnergyCanvas.jsx'
+import { observeCanvasLifecycle, releaseCanvasBackingStore } from './canvasLifecycle.js'
 import { observeCanvasResize } from './observeCanvasResize.js'
 import { getLocalizedLegalPage } from './legal.js'
 import { company } from './siteConfig.js'
@@ -122,6 +123,7 @@ function SpaceBlock() {
 
     const TAU = Math.PI * 2
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const mobile = window.matchMedia('(max-width: 800px)').matches
     const stars = Array.from({ length: 42 }, (_, index) => ({
       x: (index * 47.3 % 100) / 100,
       y: (index * 71.7 % 100) / 100,
@@ -142,7 +144,7 @@ function SpaceBlock() {
 
     const resize = () => {
       const rect = stage.getBoundingClientRect()
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+      const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.25 : 1.5)
       width = rect.width
       height = rect.height
       const pixelWidth = Math.max(1, Math.floor(width * dpr))
@@ -187,32 +189,36 @@ function SpaceBlock() {
         context.fill()
       })
       context.globalAlpha = 1
-      if (visible && document.visibilityState === 'visible' && !reduced) frame = requestAnimationFrame(draw)
+      if (!reduced && lifecycle.canRun()) schedule()
     }
     const schedule = () => {
-      if (!frame && visible && document.visibilityState === 'visible') frame = requestAnimationFrame(draw)
+      if (!frame && lifecycle?.canRun()) frame = requestAnimationFrame(draw)
     }
+    const cancel = () => {
+      if (frame) cancelAnimationFrame(frame)
+      frame = 0
+    }
+    const lifecycle = observeCanvasLifecycle({ canvas, isInView: () => visible, resize, schedule, cancel })
     const stopObservingSize = observeCanvasResize(stage, () => {
       resize()
       schedule()
-    })
+    }, lifecycle.canRun)
     const visibilityObserver = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting
-      if (visible) schedule()
-      else if (frame) { cancelAnimationFrame(frame); frame = 0 }
+      if (visible) {
+        if (lifecycle.canRun()) resize()
+        schedule()
+      } else {
+        cancel()
+        releaseCanvasBackingStore(canvas)
+      }
     }, { rootMargin: '100px 0px' })
     visibilityObserver.observe(stage)
-    const onVisibility = () => {
-      if (document.visibilityState !== 'visible' && frame) { cancelAnimationFrame(frame); frame = 0 }
-      else if (visible && !frame) frame = requestAnimationFrame(draw)
-    }
-    document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
-      if (frame) cancelAnimationFrame(frame)
+      lifecycle.dispose()
       stopObservingSize()
       visibilityObserver.disconnect()
-      document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [])
 
@@ -401,7 +407,7 @@ function MethodVisual({ active, onActivate }) {
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
     let width = 0; let height = 0; let frame = 0; let visible = false; let lastStage = -1
     const startTime = performance.now()
-    const resize = () => { const rect = stage.getBoundingClientRect(); const dpr = Math.min(window.devicePixelRatio || 1, 2); width = rect.width; height = rect.height; const pixelWidth = Math.max(1, Math.floor(width * dpr)); const pixelHeight = Math.max(1, Math.floor(height * dpr)); if (canvas.width !== pixelWidth) canvas.width = pixelWidth; if (canvas.height !== pixelHeight) canvas.height = pixelHeight; ctx.setTransform(dpr, 0, 0, dpr, 0, 0) }
+    const resize = () => { const rect = stage.getBoundingClientRect(); const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.25 : 2); width = rect.width; height = rect.height; const pixelWidth = Math.max(1, Math.floor(width * dpr)); const pixelHeight = Math.max(1, Math.floor(height * dpr)); if (canvas.width !== pixelWidth) canvas.width = pixelWidth; if (canvas.height !== pixelHeight) canvas.height = pixelHeight; ctx.setTransform(dpr, 0, 0, dpr, 0, 0) }
     const center = () => ({ x: width * (mobile ? .53 : .62), y: height * .55 })
     const stroke = (points, color, size, blur = 0) => { ctx.save(); ctx.beginPath(); points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.strokeStyle = color; ctx.lineWidth = size; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.shadowColor = '#9e63ff'; ctx.shadowBlur = blur; ctx.stroke(); ctx.restore() }
     const ellipsePoint = (planet, progress, c) => { const angle = planet.phase + progress * TAU * planet.speed; const rx = planet.rx * width; const ry = planet.ry * height; const x = Math.cos(angle) * rx; const y = Math.sin(angle) * ry; return { x: c.x + x * Math.cos(planet.tilt) - y * Math.sin(planet.tilt), y: c.y + x * Math.sin(planet.tilt) + y * Math.cos(planet.tilt), z: Math.sin(angle + planet.phase) } }
@@ -421,14 +427,24 @@ function MethodVisual({ active, onActivate }) {
       const sun = ctx.createRadialGradient(c.x - sunR * .3, c.y - sunR * .35, 0, c.x, c.y, sunR); sun.addColorStop(0, '#fff'); sun.addColorStop(.18, '#ead5ff'); sun.addColorStop(.46, '#8e4de2'); sun.addColorStop(.78, '#35105e'); sun.addColorStop(1, '#08030e'); ctx.fillStyle = sun; ctx.shadowColor = '#a75cff'; ctx.shadowBlur = 34 + pulse * 15; ctx.beginPath(); ctx.arc(c.x, c.y, sunR, 0, TAU); ctx.fill(); ctx.shadowBlur = 0
       for (let i = 0; i < 26; i += 1) { const a = i / 26 * TAU + phase * (i % 2 ? -2 : 2); const rr = sunR * (.18 + (i % 7) * .1 + .03 * Math.sin(phase * 3 + i)); ctx.fillStyle = i % 5 === 0 ? '#fff' : '#c18aff'; ctx.globalAlpha = .24 + pulse * .2; ctx.beginPath(); ctx.arc(c.x + Math.cos(a) * rr, c.y + Math.sin(a) * rr, i % 5 === 0 ? 1.5 : .8, 0, TAU); ctx.fill() }
       ctx.globalAlpha = 1
-      if (visible && document.visibilityState === 'visible' && !reduced) frame = requestAnimationFrame(draw)
+      if (!reduced && lifecycle.canRun()) schedule()
     }
-    const schedule = () => { if (!frame && visible && document.visibilityState === 'visible') frame = requestAnimationFrame(draw) }
-    const stopObservingSize = observeCanvasResize(stage, () => { resize(); schedule() })
-    let intersection = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; if (visible) schedule(); else if (frame) { cancelAnimationFrame(frame); frame = 0 } }, { rootMargin: '140px 0px' }); intersection.observe(stage)
-    const onVisibility = () => { if (document.visibilityState !== 'visible' && frame) { cancelAnimationFrame(frame); frame = 0 } else schedule() }
-    document.addEventListener('visibilitychange', onVisibility)
-    return () => { if (frame) cancelAnimationFrame(frame); stopObservingSize(); intersection.disconnect(); document.removeEventListener('visibilitychange', onVisibility) }
+    const schedule = () => { if (!frame && lifecycle?.canRun()) frame = requestAnimationFrame(draw) }
+    const cancel = () => { if (frame) cancelAnimationFrame(frame); frame = 0 }
+    const lifecycle = observeCanvasLifecycle({ canvas, isInView: () => visible, resize, schedule, cancel })
+    const stopObservingSize = observeCanvasResize(stage, () => { resize(); schedule() }, lifecycle.canRun)
+    const intersection = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting
+      if (visible) {
+        if (lifecycle.canRun()) resize()
+        schedule()
+      } else {
+        cancel()
+        releaseCanvasBackingStore(canvas)
+      }
+    }, { rootMargin: '140px 0px' })
+    intersection.observe(stage)
+    return () => { lifecycle.dispose(); stopObservingSize(); intersection.disconnect() }
   }, [onActivate])
 
   const [title, description] = text.steps[active]
