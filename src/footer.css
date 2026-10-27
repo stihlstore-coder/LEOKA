@@ -32,4 +32,5 @@
 .legal-back{display:inline-flex;margin-top:20px;color:#c3a6ff;font:10px var(--mono);letter-spacing:.06em}.legal-back:hover{color:#fff}
 @media(max-width:1000px){.footer-grid{grid-template-columns:1.4fr repeat(2,1fr);row-gap:55px}.footer-brand-column{grid-row:span 2}}
 @media(max-width:680px){.footer-container,.legal-shell{width:min(100% - 40px,1220px)}.footer-cta{display:block;padding:82px 0 58px}.footer-cta h2{max-width:390px}.footer-cta-link{margin-top:30px}.footer-grid{grid-template-columns:repeat(2,1fr);gap:45px 24px;padding:56px 0 62px}.footer-brand-column{grid-column:1/-1;grid-row:auto}.footer-description{max-width:320px}.footer-legal-bar{display:block;line-height:1.7}.footer-legal-links{margin-top:12px;gap:18px}.legal-page{padding-top:122px}.legal-content{margin-top:56px;padding-top:34px}.legal-content section{margin-bottom:34px}}
+@media(max-width:480px){.legal-page h1{font-size:clamp(36px,11vw,64px)}}
 @media(prefers-reduced-motion:reduce){.footer-cta-link,.footer-links a{transition:none}}

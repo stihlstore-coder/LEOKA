@@ -15,6 +15,7 @@
 @media(max-width:1100px){.workforce-layout{grid-template-columns:320px minmax(560px,1fr);gap:0}.workforce-copy h2{font-size:clamp(50px,6vw,78px)}}
 @media(max-width:800px){.workforce{min-height:1320px;padding:125px 0 70px}.workforce-layout{display:block;min-height:0}.workforce-copy{padding:0}.workforce-copy h2{font-size:clamp(52px,14vw,76px)}.workforce-lede{margin-top:30px}.workforce-micro{margin-top:30px}.workforce-stage{height:760px;margin-top:20px}.workforce-node{width:22px;height:22px}.node-copy{min-width:100px}.workforce-detail{right:50%;bottom:0;transform:translateX(50%);width:min(245px,calc(100% - 30px))}.scene-caption{display:none}}
 @media(max-width:460px){.workforce{min-height:1350px}.workforce-stage{height:760px}.workforce-node strong{font-size:9px}.workforce-node small{font-size:8px}.workforce-detail{bottom:0}}
+@media(max-width:460px){.workforce-copy h2{font-size:clamp(38px,12vw,56px)}}
 @media(prefers-reduced-motion:reduce){.workforce-nebula{animation:none}.workforce-node{transition:none}.node-copy,.node-orb{transition:none}}
 
 /* Every orbiting employee is identified at all times; the label is part of

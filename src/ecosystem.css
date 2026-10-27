@@ -62,3 +62,15 @@
     transform:none;
   }
 }
+
+@media(max-width:360px){
+  .ecosystem-visual .ecosystem-node strong{
+    font-size:10px;
+    letter-spacing:.02em;
+    overflow-wrap:anywhere;
+  }
+
+  .ecosystem-visual .ecosystem-node small{
+    overflow-wrap:anywhere;
+  }
+}

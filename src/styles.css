@@ -110,3 +110,34 @@
     text-align:center;
   }
 }
+
+/* Keep the mobile layout aligned to the safe visual viewport. */
+@media(max-width:800px){
+  .container{
+    width:min(1220px,calc(100% - 40px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px)));
+  }
+
+  .nav-wrap{
+    padding-top:env(safe-area-inset-top,0px);
+  }
+
+  .hero h1{
+    font-size:clamp(42px,13vw,76px);
+  }
+
+  .hero-meta{
+    left:max(20px,env(safe-area-inset-left,0px));
+    right:max(20px,env(safe-area-inset-right,0px));
+    bottom:20px;
+    flex-wrap:wrap;
+    gap:8px 16px;
+    font-size:8px;
+    line-height:1.4;
+  }
+}
+
+@media(max-width:480px){
+  .company h2,.section-heading h2,.cta h2{
+    font-size:clamp(36px,11vw,60px);
+  }
+}
