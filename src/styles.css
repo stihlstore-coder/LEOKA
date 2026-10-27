@@ -72,6 +72,16 @@
 @media(max-width:800px){.nav-links .language-switcher{justify-content:center;margin-top:8px;padding:12px 10px 8px;border-top:1px solid #ffffff18}.nav-links .language-option-wrap{gap:12px}.nav-links .language-option{min-width:48px;padding:9px 8px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}.skip-link{transition:none}}
 
+.hero h1 .hero-ua-technology-word{letter-spacing:.05em}
+
+@media(max-width:800px){
+  .hero h1 .hero-ua-technology-word{letter-spacing:-.07em}
+}
+
+@media(max-width:350px){
+  .hero h1 .hero-ua-technology-word{letter-spacing:-.085em}
+}
+
 /* Highlight the AI abbreviation without changing surrounding copy colors. */
 .ai-term{color:#ff3030}
 @supports (background-clip:text) or (-webkit-background-clip:text){
