@@ -19,7 +19,7 @@ import { MOBILE_VIEWPORT_QUERY, getEcosystemPanelDetails, isMobileViewportWidth,
 
 const siteUrl = import.meta.env.VITE_SITE_URL?.replace(/\/$/, '')
 const initialLocaleLanguage = initializeLocaleRoute()
-document.documentElement.lang = initialLocaleLanguage
+document.documentElement.lang = languageTagForLocale(initialLocaleLanguage)
 
 const SECTION_NUMBERS = Object.freeze({
   hero: '01',
@@ -59,7 +59,11 @@ const productSystems = [
   ['04', 'automation'], ['05', 'data'], ['06', 'platform']
 ]
 const HomepageLocaleContext = createContext(null)
-function useHomepageLocale() { return useContext(HomepageLocaleContext) || { language: 'en', copy: homepageTranslations.en } }
+function useHomepageLocale() { return useContext(HomepageLocaleContext) || { language: 'ua', copy: homepageTranslations.ua } }
+
+function languageTagForLocale(locale) {
+  return locale === 'ua' ? 'uk' : 'en'
+}
 
 // The repository currently has no separate application registry or product URL.
 // Keep this section data-driven so verified product metadata can be added without
@@ -115,7 +119,7 @@ function Nav() {
   const links = copy.nav.links.map((label, index) => [label, ['#company', '#workforce', '#ecosystem', '#contact'][index]])
   const hrefFor = href => localizedHref(language, href)
   const languageHref = code => `${getLocalizedPath(code, window.location.pathname)}${window.location.search}${window.location.hash}`
-  return <><a className="skip-link" href="#main-content">{copy.nav.skip}</a><header className="nav-wrap"><nav className="nav container" aria-label={copy.nav.main}><a className="brand" href={hrefFor('#top')}><span className="brand-mark">L</span><span>LEOKA</span></a><button type="button" className="menu-button" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="main-navigation" aria-label={open ? copy.nav.close : copy.nav.open}><span /><span /></button><div id="main-navigation" className={`nav-links has-language ${open ? 'is-open' : ''}`}>{links.map(([label, href]) => <a key={href} href={hrefFor(href)} onClick={() => setOpen(false)}>{label}</a>)}<a className="nav-cta" href={workWithLeokaHref} onClick={() => setOpen(false)}>{copy.nav.workWith} <Arrow /></a><div className="language-switcher" role="group" aria-label={copy.nav.language}>{['en', 'uk'].map((code, index) => <span key={code} className="language-option-wrap">{index > 0 && <span className="language-separator" aria-hidden="true">|</span>}<a href={languageHref(code)} lang={code} className={`language-option ${language === code ? 'is-active' : ''}`} aria-current={language === code ? 'page' : undefined} aria-label={`${copy.nav.switchTo} ${copy.languageNames[code]}`} onClick={() => { saveHomepageLanguage(code); setOpen(false) }}>{code === 'uk' ? 'УКР' : 'EN'}</a></span>)}</div></div></nav></header></>
+  return <><a className="skip-link" href="#main-content">{copy.nav.skip}</a><header className="nav-wrap"><nav className="nav container" aria-label={copy.nav.main}><a className="brand" href={hrefFor('#top')}><span className="brand-mark">L</span><span>LEOKA</span></a><button type="button" className="menu-button" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="main-navigation" aria-label={open ? copy.nav.close : copy.nav.open}><span /><span /></button><div id="main-navigation" className={`nav-links has-language ${open ? 'is-open' : ''}`}>{links.map(([label, href]) => <a key={href} href={hrefFor(href)} onClick={() => setOpen(false)}>{label}</a>)}<a className="nav-cta" href={workWithLeokaHref} onClick={() => setOpen(false)}>{copy.nav.workWith} <Arrow /></a><div className="language-switcher" role="group" aria-label={copy.nav.language}>{['en', 'ua'].map((code, index) => <span key={code} className="language-option-wrap">{index > 0 && <span className="language-separator" aria-hidden="true">|</span>}<a href={languageHref(code)} lang={languageTagForLocale(code)} className={`language-option ${language === code ? 'is-active' : ''}`} aria-current={language === code ? 'page' : undefined} aria-label={`${copy.nav.switchTo} ${copy.languageNames[code]}`} onClick={() => { saveHomepageLanguage(code); setOpen(false) }}>{code === 'ua' ? 'УКР' : 'EN'}</a></span>)}</div></div></nav></header></>
 }
 
 function localizedHref(language, href) {
@@ -653,7 +657,7 @@ function updatePageMetadata({ language, title, description, imageAlt, noIndex = 
   canonical.rel = 'canonical'
   canonical.href = canonicalUrl
   if (!canonical.isConnected) document.head.appendChild(canonical)
-  document.documentElement.lang = language
+  document.documentElement.lang = languageTagForLocale(language)
   document.title = title
   setMetaContent('meta[name="description"]', description)
   setMetaContent('meta[property="og:title"]', title)
@@ -667,10 +671,10 @@ function updatePageMetadata({ language, title, description, imageAlt, noIndex = 
   setMetaContent('meta[name="twitter:image:alt"]', imageAlt)
   setMetaContent('meta[name="robots"]', noIndex ? 'noindex,follow' : 'index,follow')
 
-  for (const code of ['en', 'uk']) {
-    const alternate = document.querySelector(`link[rel="alternate"][hreflang="${code}"]`) || document.createElement('link')
+  for (const [code, languageTag] of [['en', 'en'], ['ua', 'uk-UA']]) {
+    const alternate = document.querySelector(`link[rel="alternate"][hreflang="${languageTag}"]`) || document.createElement('link')
     alternate.rel = 'alternate'
-    alternate.hreflang = code
+    alternate.hreflang = languageTag
     alternate.href = `${origin}${getLocalizedPath(code, path)}`
     if (!alternate.isConnected) document.head.appendChild(alternate)
   }

@@ -19,7 +19,7 @@ test('desktop keeps the Section 5 canvas and other scenes keep their existing ca
 })
 
 test('each localized ecosystem panel uses only its matching existing system copy', () => {
-  for (const language of ['en', 'uk']) {
+  for (const language of ['en', 'ua']) {
     const ecosystemCopy = homepageTranslations[language].ecosystem
 
     ecosystemCopy.systems.forEach(([title, description], index) => {

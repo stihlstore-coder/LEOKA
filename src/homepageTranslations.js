@@ -5,7 +5,7 @@ export const homepageTranslations = {
       description: 'LEOKA is an AI-native technology company building software, intelligent systems and digital products through a specialized AI workforce.',
       imageAlt: 'LEOKA — AI-native technology company',
     },
-    languageNames: { en: 'English', uk: 'Ukrainian' },
+    languageNames: { en: 'English', ua: 'Ukrainian' },
     structureCore: 'INTELLIGENCE CORE',
     nav: {
       skip: 'Skip to main content',
@@ -131,13 +131,13 @@ export const homepageTranslations = {
       back: 'Return to LEOKA',
     },
   },
-  uk: {
+  ua: {
     seo: {
       title: 'LEOKA — технологічна компанія, створена навколо ШІ',
       description: 'LEOKA створює програмне забезпечення, інтелектуальні системи та цифрові продукти за допомогою спеціалізованої команди штучного інтелекту.',
       imageAlt: 'LEOKA — технологічна компанія, створена навколо штучного інтелекту',
     },
-    languageNames: { en: 'Англійська', uk: 'Українська' },
+    languageNames: { en: 'Англійська', ua: 'Українська' },
     structureCore: 'ІНТЕЛЕКТУАЛЬНЕ ЯДРО',
     nav: {
       skip: 'Перейти до основного вмісту',

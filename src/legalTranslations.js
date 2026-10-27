@@ -6,7 +6,7 @@ const list = (items) => ({ type: 'list', items })
 const section = (heading, ...blocks) => ({ heading, blocks })
 
 export const legalTranslations = {
-  uk: {
+  ua: {
     terms: {
       eyebrow: 'ПРАВОВА ІНФОРМАЦІЯ / УМОВИ КОРИСТУВАННЯ',
       title: 'Умови користування',

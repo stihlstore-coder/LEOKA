@@ -3,61 +3,61 @@
   <url>
     <loc>https://leoka.us/en/</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://leoka.us/en/" />
-    <xhtml:link rel="alternate" hreflang="uk" href="https://leoka.us/uk/" />
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://leoka.us/ua/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://leoka.us/" />
   </url>
   <url>
-    <loc>https://leoka.us/uk/</loc>
+    <loc>https://leoka.us/ua/</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://leoka.us/en/" />
-    <xhtml:link rel="alternate" hreflang="uk" href="https://leoka.us/uk/" />
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://leoka.us/ua/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://leoka.us/" />
   </url>
   <url>
     <loc>https://leoka.us/en/terms</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://leoka.us/en/terms" />
-    <xhtml:link rel="alternate" hreflang="uk" href="https://leoka.us/uk/terms" />
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://leoka.us/ua/terms" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://leoka.us/en/terms" />
   </url>
   <url>
-    <loc>https://leoka.us/uk/terms</loc>
+    <loc>https://leoka.us/ua/terms</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://leoka.us/en/terms" />
-    <xhtml:link rel="alternate" hreflang="uk" href="https://leoka.us/uk/terms" />
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://leoka.us/ua/terms" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://leoka.us/en/terms" />
   </url>
   <url>
     <loc>https://leoka.us/en/privacy</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://leoka.us/en/privacy" />
-    <xhtml:link rel="alternate" hreflang="uk" href="https://leoka.us/uk/privacy" />
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://leoka.us/ua/privacy" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://leoka.us/en/privacy" />
   </url>
   <url>
-    <loc>https://leoka.us/uk/privacy</loc>
+    <loc>https://leoka.us/ua/privacy</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://leoka.us/en/privacy" />
-    <xhtml:link rel="alternate" hreflang="uk" href="https://leoka.us/uk/privacy" />
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://leoka.us/ua/privacy" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://leoka.us/en/privacy" />
   </url>
   <url>
     <loc>https://leoka.us/en/cookies</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://leoka.us/en/cookies" />
-    <xhtml:link rel="alternate" hreflang="uk" href="https://leoka.us/uk/cookies" />
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://leoka.us/ua/cookies" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://leoka.us/en/cookies" />
   </url>
   <url>
-    <loc>https://leoka.us/uk/cookies</loc>
+    <loc>https://leoka.us/ua/cookies</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://leoka.us/en/cookies" />
-    <xhtml:link rel="alternate" hreflang="uk" href="https://leoka.us/uk/cookies" />
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://leoka.us/ua/cookies" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://leoka.us/en/cookies" />
   </url>
   <url>
     <loc>https://leoka.us/en/accessibility</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://leoka.us/en/accessibility" />
-    <xhtml:link rel="alternate" hreflang="uk" href="https://leoka.us/uk/accessibility" />
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://leoka.us/ua/accessibility" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://leoka.us/en/accessibility" />
   </url>
   <url>
-    <loc>https://leoka.us/uk/accessibility</loc>
+    <loc>https://leoka.us/ua/accessibility</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://leoka.us/en/accessibility" />
-    <xhtml:link rel="alternate" hreflang="uk" href="https://leoka.us/uk/accessibility" />
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://leoka.us/ua/accessibility" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://leoka.us/en/accessibility" />
   </url>
 </urlset>
