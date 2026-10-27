@@ -74,3 +74,40 @@
     overflow-wrap:anywhere;
   }
 }
+
+@media(max-width:800px){
+  .scene-ecosystem .starfield i{
+    animation:none;
+  }
+
+  .scene-ecosystem .planet-arc{
+    display:none;
+  }
+
+  .ecosystem-visual .ecosystem-aura,
+  .ecosystem-visual .ecosystem-orbit,
+  .ecosystem-visual .ecosystem-lines,
+  .ecosystem-visual .ecosystem-particle{
+    display:none;
+  }
+
+  .ecosystem-visual .ecosystem-core{
+    top:auto;
+    bottom:0;
+    left:50%;
+    width:100%;
+    height:auto;
+    padding:0;
+    transform:translateX(-50%);
+    animation:none;
+    border:0;
+    background:none;
+    box-shadow:none;
+  }
+
+  .ecosystem-visual .ecosystem-core::before,
+  .ecosystem-visual .ecosystem-core::after,
+  .ecosystem-visual .core-signal{
+    display:none;
+  }
+}

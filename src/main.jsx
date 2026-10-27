@@ -14,6 +14,7 @@ import { getLocalizedLegalPage } from './legal.js'
 import { company } from './siteConfig.js'
 import { homepageTranslations } from './homepageTranslations.js'
 import { getLocalizedPath, getRoutePath, initializeLocaleRoute, saveHomepageLanguage } from './homepageCountry.js'
+import { MOBILE_VIEWPORT_QUERY, isMobileViewportWidth, shouldRenderDynamicCanvas } from './ecosystemPresentation.js'
 
 const siteUrl = import.meta.env.VITE_SITE_URL?.replace(/\/$/, '')
 const initialLocaleLanguage = initializeLocaleRoute()
@@ -82,8 +83,29 @@ function OrbitalStructure({ variant = 'hero' }) {
   </div>
 }
 
-function CosmicScene({ variant, children }) {
-  return <div className={`cosmic-scene scene-${variant}`} aria-hidden="true"><Starfield density={variant === 'workforce' ? 50 : 34} /><div className="nebula nebula-one" /><div className="nebula nebula-two" />{variant !== 'workforce' && variant !== 'workflow' && <DynamicEnergyCanvas variant={variant} />}{children}</div>
+function useMobileViewport() {
+  const [isMobile, setIsMobile] = useState(() => isMobileViewportWidth(window.innerWidth))
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(MOBILE_VIEWPORT_QUERY)
+    const update = () => setIsMobile(mediaQuery.matches)
+    update()
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', update)
+      return () => mediaQuery.removeEventListener('change', update)
+    }
+
+    mediaQuery.addListener(update)
+    return () => mediaQuery.removeListener(update)
+  }, [])
+
+  return isMobile
+}
+
+function CosmicScene({ variant, children, mobileViewport = false }) {
+  const renderDynamicCanvas = shouldRenderDynamicCanvas(variant, mobileViewport)
+  return <div className={`cosmic-scene scene-${variant}`} aria-hidden="true"><Starfield density={variant === 'workforce' ? 50 : 34} /><div className="nebula nebula-one" /><div className="nebula nebula-two" />{variant !== 'workforce' && variant !== 'workflow' && renderDynamicCanvas && <DynamicEnergyCanvas variant={variant} />}{children}</div>
 }
 
 function Nav() {
@@ -478,7 +500,8 @@ function EcosystemVisual() {
 
 function Ecosystem() {
   const { copy } = useHomepageLocale(); const text = copy.ecosystem
-  return <section className="ecosystem section" id="ecosystem"><CosmicScene variant="ecosystem"><div className="ecosystem-grid-glow" /><div className="planet-arc" /><div className="planet-arc planet-arc-two" /></CosmicScene><div className="container ecosystem-content"><Reveal className="section-heading"><div><p className="section-kicker">{SECTION_NUMBERS.ecosystem} / {text.kicker}</p><h2>{text.heading[0]}<br /><span>{text.heading[1]}</span></h2></div><p>{text.subheading[0]}<br />{text.subheading[1]}</p></Reveal><Reveal className="ecosystem-intro"><p>{text.introduction}</p><div className="ecosystem-actions">{productUrl ? <a className="button button-primary" href={productUrl} target="_blank" rel="noopener noreferrer">{text.exploreProduct} <Arrow /></a> : <span className="button button-primary button-disabled" aria-disabled="true" title={text.productUrlMissing}>{text.exploreProduct} <Arrow /></span>}<a className="text-link" href={workWithLeokaHref}>{copy.footer.workWith} <Arrow /></a></div></Reveal><Reveal><EcosystemVisual /></Reveal><p className="ecosystem-note"><span>{text.registryLabel}</span> / {text.registryNote}</p></div></section>
+  const mobileViewport = useMobileViewport()
+  return <section className="ecosystem section" id="ecosystem"><CosmicScene variant="ecosystem" mobileViewport={mobileViewport}><div className="ecosystem-grid-glow" /><div className="planet-arc" /><div className="planet-arc planet-arc-two" /></CosmicScene><div className="container ecosystem-content"><Reveal className="section-heading"><div><p className="section-kicker">{SECTION_NUMBERS.ecosystem} / {text.kicker}</p><h2>{text.heading[0]}<br /><span>{text.heading[1]}</span></h2></div><p>{text.subheading[0]}<br />{text.subheading[1]}</p></Reveal><Reveal className="ecosystem-intro"><p>{text.introduction}</p><div className="ecosystem-actions">{productUrl ? <a className="button button-primary" href={productUrl} target="_blank" rel="noopener noreferrer">{text.exploreProduct} <Arrow /></a> : <span className="button button-primary button-disabled" aria-disabled="true" title={text.productUrlMissing}>{text.exploreProduct} <Arrow /></span>}<a className="text-link" href={workWithLeokaHref}>{copy.footer.workWith} <Arrow /></a></div></Reveal><Reveal><EcosystemVisual /></Reveal><p className="ecosystem-note"><span>{text.registryLabel}</span> / {text.registryNote}</p></div></section>
 }
 
 function NextBuild() {
