@@ -14,6 +14,7 @@ import { observeCanvasResize } from './observeCanvasResize.js'
 import { getLocalizedLegalPage } from './legal.js'
 import { company } from './siteConfig.js'
 import { homepageTranslations } from './homepageTranslations.js'
+import { splitAITerms } from './aiText.js'
 import { getLocalizedPath, getRoutePath, initializeLocaleRoute, saveHomepageLanguage } from './homepageCountry.js'
 import { MOBILE_VIEWPORT_QUERY, getEcosystemPanelDetails, isMobileViewportWidth, lockEcosystemPageScroll, shouldRenderDynamicCanvas } from './ecosystemPresentation.js'
 
@@ -59,7 +60,35 @@ const productSystems = [
   ['04', 'automation'], ['05', 'data'], ['06', 'platform']
 ]
 const HomepageLocaleContext = createContext(null)
-function useHomepageLocale() { return useContext(HomepageLocaleContext) || { language: 'ua', copy: homepageTranslations.ua } }
+const nonVisualCopyKeys = new Set(['seo', 'canvasLabel', 'visualLabel', 'coreAria', 'actionAria', 'brandAria', 'closePanel', 'legalNavigation'])
+
+function prepareVisibleCopy(value, keyPath = []) {
+  if (typeof value === 'string') {
+    if (keyPath.some(key => nonVisualCopyKeys.has(key))) return value
+    const parts = splitAITerms(value)
+    if (!parts.some(part => part.isTerm)) return value
+    return parts.map((part, index) => part.isTerm
+      ? <span className="ai-term" key={`${keyPath.join('.')}-${index}`}>{part.text}</span>
+      : part.text)
+  }
+  if (Array.isArray(value)) return value.map(item => prepareVisibleCopy(item, keyPath))
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, prepareVisibleCopy(item, [...keyPath, key])]))
+  }
+  return value
+}
+
+const visibleHomepageTranslations = Object.fromEntries(Object.entries(homepageTranslations)
+  .map(([language, copy]) => [language, prepareVisibleCopy(copy)]))
+
+function highlightedText(text) {
+  if (typeof text !== 'string') return text
+  return splitAITerms(text).map((part, index) => part.isTerm
+    ? <span className="ai-term" key={`term-${index}`}>{part.text}</span>
+    : part.text)
+}
+
+function useHomepageLocale() { return useContext(HomepageLocaleContext) || { language: 'ua', copy: visibleHomepageTranslations.ua } }
 
 function languageTagForLocale(locale) {
   return locale === 'ua' ? 'uk' : 'en'
@@ -129,8 +158,8 @@ function localizedHref(language, href) {
 }
 
 function Hero() {
-  const { copy } = useHomepageLocale(); const text = copy.hero
-  return <section className="hero" id="top"><CosmicScene variant="hero"><OrbitalStructure /></CosmicScene><div className="hero-content container"><Reveal><p className="eyebrow"><span className="live-dot" /> {text.eyebrow}</p><h1>{text.heading[0]}<br /><span>{text.heading[1]}</span><br />{text.heading[2]}<br /><em>{text.heading[3]}</em></h1><p className="hero-lede">{text.description}</p><div className="hero-actions"><a className="button button-primary" href="#company">{text.explore} <Arrow /></a><a className="text-link" href="#contact">{text.work} <Arrow /></a></div></Reveal></div><div className="hero-meta"><span>{SECTION_NUMBERS.hero} / 06</span><span>{text.meta}</span></div><div className="hero-scroll">{text.scroll} <i /></div></section>
+  const { copy, language } = useHomepageLocale(); const text = copy.hero
+  return <section className="hero" id="top"><CosmicScene variant="hero"><OrbitalStructure /></CosmicScene><div className="hero-content container"><Reveal><p className="eyebrow"><span className="live-dot" /> {text.eyebrow}</p><h1>{text.heading[0]}<br /><span lang={language === 'ua' ? 'uk' : 'en'} className="hero-mobile-version-heading">{text.heading[1]}</span><br />{text.heading[2]}<br /><em>{text.heading[3]}</em></h1><p className="hero-lede">{text.description}</p><div className="hero-actions"><a className="button button-primary" href="#company">{text.explore} <Arrow /></a><a className="text-link" href="#contact">{text.work} <Arrow /></a></div></Reveal></div><div className="hero-meta"><span>{SECTION_NUMBERS.hero} / 06</span><span>{text.meta}</span></div><div className="hero-scroll">{text.scroll} <i /></div></section>
 }
 
 function Company() {
@@ -697,12 +726,12 @@ function LegalPage({ page }) {
   const { language, copy } = useHomepageLocale()
   const title = page.metaTitle || `${page.title} — LEOKA`
   const renderBlock = (block) => {
-    if (typeof block === 'string') return <p key={block}>{block}</p>
-    if (block.type === 'link') return <p key={block.href}><a className="legal-inline-link" href={localizedHref(language, block.href)}>{block.label} <Arrow /></a></p>
-    if (block.type === 'list') return <ul key={block.items.join('|')}>{block.items.map(item => <li key={item}>{item}</li>)}</ul>
-    return <p key={block.text}>{block.text}</p>
+    if (typeof block === 'string') return <p key={block}>{highlightedText(block)}</p>
+    if (block.type === 'link') return <p key={block.href}><a className="legal-inline-link" href={localizedHref(language, block.href)}>{highlightedText(block.label)} <Arrow /></a></p>
+    if (block.type === 'list') return <ul key={block.items.join('|')}>{block.items.map(item => <li key={item}>{highlightedText(item)}</li>)}</ul>
+    return <p key={block.text}>{highlightedText(block.text)}</p>
   }
-  return <><PageMetadata language={language} title={title} description={page.description} /><Nav /><main id="main-content" className="legal-page"><article className="legal-shell"><p className="legal-eyebrow">{page.eyebrow}</p><h1>{page.title}</h1><p className="legal-intro">{page.description}</p><p className="legal-updated">{copy.legal.lastUpdated}: {page.lastUpdated || 'August 11, 2026'}</p><div className="legal-content">{page.sections.map(([heading, blocks]) => <section key={heading}><h2>{heading}</h2>{blocks.map(renderBlock)}</section>)}</div><a className="legal-back" href={localizedHref(language, '#top')}>{copy.legal.back} <Arrow /></a></article></main><Footer /></>
+  return <><PageMetadata language={language} title={title} description={page.description} /><Nav /><main id="main-content" className="legal-page"><article className="legal-shell"><p className="legal-eyebrow">{highlightedText(page.eyebrow)}</p><h1>{highlightedText(page.title)}</h1><p className="legal-intro">{highlightedText(page.description)}</p><p className="legal-updated">{copy.legal.lastUpdated}: {page.lastUpdated || 'August 11, 2026'}</p><div className="legal-content">{page.sections.map(([heading, blocks]) => <section key={heading}><h2>{highlightedText(heading)}</h2>{blocks.map(renderBlock)}</section>)}</div><a className="legal-back" href={localizedHref(language, '#top')}>{copy.legal.back} <Arrow /></a></article></main><Footer /></>
 }
 
 function NotFound() {
@@ -726,7 +755,7 @@ function App() {
   const route = getRoutePath(window.location.pathname)
   const language = route.language || initialLocaleLanguage
   const page = route.isLegalPage ? getLocalizedLegalPage(route.pageKey, language) : null
-  const copy = homepageTranslations[language]
+  const copy = visibleHomepageTranslations[language]
   return <HomepageLocaleContext.Provider value={{ language, copy }}>
     {route.isHome ? <Homepage /> : page ? <LegalPage page={page} /> : <NotFound />}
   </HomepageLocaleContext.Provider>
